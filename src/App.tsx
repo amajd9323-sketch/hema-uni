@@ -413,13 +413,71 @@ export default function App() {
         </section>}
 
         {view === 'quiz' && <section className="page">
-          {!activeQuiz ? <EmptyState onUpload={() => setView('library')} /> : <div className="quiz-screen">
+          {!activeQuiz ? <div className="quiz-screen">
+            <div className="page-intro"><span className="eyebrow"><Clock3 size={15} /> وضع الامتحان</span><h1>أنشئ امتحانك</h1><p>حدد المحاضرة والصعوبة والوقت. التصحيح والتفسير يظهران بعد التسليم.</p></div>
+            {!selected ? <EmptyState onUpload={() => setView('library')} /> : <div className="exam-builder">
+              <label>المحاضرة</label>
+              <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>{materials.map((material) => <option key={material.id} value={material.id}>{material.name}</option>)}</select>
+              <div className="exam-options">
+                <div><label htmlFor="question-count">عدد الأسئلة</label><select id="question-count" value={questionCount} onChange={(event) => setQuestionCount(Number(event.target.value))}><option value={5}>5 أسئلة</option><option value={10}>10 أسئلة</option><option value={15}>15 سؤالًا</option></select></div>
+                <div><label htmlFor="exam-difficulty">الصعوبة</label><select id="exam-difficulty" value={difficulty} onChange={(event) => setDifficulty(event.target.value as TutorDifficulty)}><option value="easy">سهل</option><option value="medium">متوسط</option><option value="hard">صعب</option></select></div>
+                <div><label htmlFor="exam-duration">الوقت</label><select id="exam-duration" value={examDuration} onChange={(event) => setExamDuration(Number(event.target.value))}><option value={0}>دون مؤقت</option><option value={10}>10 دقائق</option><option value={15}>15 دقيقة</option><option value={20}>20 دقيقة</option><option value={30}>30 دقيقة</option></select></div>
+              </div>
+              <p className="muted-text">AI ينشئ أسئلة من نصوص المحاضرة المتاحة. راجع دائمًا التفسيرات مع المصدر.</p>
+              <button className="primary-btn" disabled={busy || !selected.pages.some((page) => page.text.trim())} onClick={() => void ask('quiz')}>{busy ? <Loader2 className="spin" size={17} /> : <BookOpen size={17} />} إنشاء الامتحان</button>
+            </div>
+            <div className="saved-quizzes"><div className="section-heading"><div><h2>امتحانات سابقة</h2><p>نتائج محفوظة محليًا</p></div></div>
+              {quizzes.length ? quizzes.map((quiz) => <button className="quiz-row" key={quiz.id} onClick={() => openQuiz(quiz)}><span className="quiz-row-icon"><BookOpen size={19} /></span><span className="quiz-row-info"><strong>{quiz.title}</strong><small>{quiz.questions.length} سؤال · {quiz.durationMinutes ? quiz.durationMinutes + ' دقيقة' : 'دون مؤقت'}</small></span><ChevronLeft size={18} /></button>) : <p className="muted-text">لم تحفظ امتحانات بعد.</p>}
+            </div>
+          </div> : <div className="quiz-screen">
             <button className="back-link" onClick={() => setView('library')}><ArrowRight size={16} /> العودة للمكتبة</button>
-            <div className="page-intro"><span className="eyebrow"><BookOpen size={15} /> تدريب قصير</span><h1>{activeQuiz.title}</h1><p>{activeQuiz.questions.length} أسئلة من المحاضرة. اختر إجابة لكل سؤال ثم اضغط تصحيح.</p></div>
+            <div className="page-intro"><span className="eyebrow"><BookOpen size={15} /> {activeQuiz.durationMinutes ? 'محاكاة امتحان' : 'تدريب قصير'}</span><h1>{activeQuiz.title}</h1><p>{activeQuiz.questions.length} سؤال · {activeQuiz.difficulty === 'hard' ? 'صعب' : activeQuiz.difficulty === 'easy' ? 'سهل' : 'متوسط'} · اختر الإجابات ثم صحّح.</p></div>
+            <div className="exam-toolbar">
+              <div className="exam-timer"><Clock3 size={17} /><span>{activeQuiz.durationMinutes ? (graded ? 'انتهى الامتحان' : formatTime(timeRemaining)) : 'دون مؤقت'}</span></div>
+              <button className={examMode ? 'mode-toggle active' : 'mode-toggle'} onClick={() => { setExamMode((value) => !value); setQuestionIndex(0); }}>{examMode ? 'سؤال واحد/شاشة' : 'عرض كل الأسئلة'}</button>
+              <span className="exam-count">{Object.values(answers).filter((answer) => answer >= 0).length}/{activeQuiz.questions.length} مجاب</span>
+            </div>
+            {examMode && <div className="exam-progress"><div style={{ width: ((questionIndex + 1) / activeQuiz.questions.length * 100) + '%' }} /></div>}
             {graded && <div className="score-card"><span className="score-number">{activeQuiz.questions.reduce((sum, item, index) => sum + (answers[index] === item.correctIndex ? 1 : 0), 0)}/{activeQuiz.questions.length}</span><div><strong>نتيجتك</strong><small>{activeQuiz.questions.reduce((sum, item, index) => sum + (answers[index] === item.correctIndex ? 1 : 0), 0) === activeQuiz.questions.length ? 'ممتاز! أجبت عن كل الأسئلة بشكل صحيح.' : 'راجع التفسيرات وحاول مرة ثانية.'}</small></div></div>}
-            {activeQuiz.questions.map((item, index) => <QuestionCard key={activeQuiz.id + '-' + index} item={item} index={index} answer={answers[index] ?? -1} graded={graded} onAnswer={(value) => setAnswers((current) => current.map((answer, i) => i === index ? value : answer))} onPage={jumpToPage} />)}
-            <div className="quiz-bottom"><button className="primary-btn" onClick={() => graded ? (setAnswers(Array(activeQuiz.questions.length).fill(-1)), setGraded(false)) : void gradeQuiz()}>{graded ? 'أعد الاختبار' : 'تصحيح الإجابات'} <ArrowRight size={16} /></button></div>
+            {(examMode ? activeQuiz.questions.map((item, index) => ({ item, index })).filter(({ index }) => index === questionIndex) : activeQuiz.questions.map((item, index) => ({ item, index }))).map(({ item, index }) => <QuestionCard key={activeQuiz.id + '-' + index} item={item} index={index} answer={answers[index] ?? -1} graded={graded} onAnswer={(value) => setAnswers((current) => { const next = [...current]; next[index] = value; return next; })} onPage={jumpToPage} />)}
+            {examMode && !graded && <div className="exam-question-nav"><button className="button-secondary" disabled={questionIndex === 0} onClick={() => setQuestionIndex((index) => Math.max(0, index - 1))}><ChevronLeft size={16} /> السابق</button><span>السؤال {questionIndex + 1} من {activeQuiz.questions.length}</span>{questionIndex < activeQuiz.questions.length - 1 ? <button className="primary-btn small" onClick={() => setQuestionIndex((index) => Math.min(activeQuiz.questions.length - 1, index + 1))}>التالي <ArrowRight size={15} /></button> : <button className="primary-btn small" onClick={() => void gradeQuiz()}>تسليم الامتحان <CheckCircle2 size={15} /></button>}</div>}
+            {graded && activeQuiz.questions.some((item, index) => answers[index] !== item.correctIndex) && <div className="mistake-review"><div className="section-heading"><div><h2>مراجعة الأخطاء</h2><p>أسئلة تحتاج إلى مراجعة</p></div></div>{activeQuiz.questions.map((item, index) => ({ item, index })).filter(({ item, index }) => answers[index] !== item.correctIndex).map(({ item, index }) => <QuestionCard key={'review-' + activeQuiz.id + '-' + index} item={item} index={index} answer={answers[index] ?? -1} graded onAnswer={() => undefined} onPage={jumpToPage} />)}</div>}
+            <div className="quiz-bottom">{graded ? <button className="primary-btn" onClick={() => { setAnswers(Array(activeQuiz.questions.length).fill(-1)); setGraded(false); setQuestionIndex(0); setTimeRemaining((activeQuiz.durationMinutes || 0) * 60); setTimerActive(Boolean(activeQuiz.durationMinutes)); }}>{'أعد الاختبار'} <RotateCcw size={16} /></button> : !examMode && <button className="primary-btn" onClick={() => void gradeQuiz()}>تصحيح الإجابات <ArrowRight size={16} /></button>}</div>
           </div>}
+        </section>}
+
+        {view === 'flashcards' && <section className="page">
+          <div className="page-intro"><span className="eyebrow"><Bookmark size={15} /> مراجعة نشطة</span><h1>بطاقات الحفظ</h1><p>راجع التعريفات والمفاهيم بسرعة. كل بطاقة تعمل دون اتصال بعد حفظها.</p></div>
+          {!activeFlashcards ? <>
+            <div className="section-heading"><div><h2>إنشاء مجموعة جديدة</h2><p>حوّل محتوى محاضرة إلى بطاقات سؤال وجواب</p></div></div>
+            <div className="flashcard-create">
+              <label htmlFor="flashcard-material">المحاضرة</label>
+              <select id="flashcard-material" value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>{materials.map((material) => <option key={material.id} value={material.id}>{material.name}</option>)}</select>
+              <button className="primary-btn" disabled={busy || !selected} onClick={() => void ask('flashcards')}><Sparkles size={17} /> إنشاء بطاقات بالذكاء الاصطناعي</button>
+              {!selected && <p className="muted-text">ارفع PDF أولًا لبدء إنشاء البطاقات.</p>}
+            </div>
+            <div className="saved-quizzes"><div className="section-heading"><div><h2>مجموعاتي المحفوظة</h2><p>متاحة على هذا الجهاز</p></div></div>
+              {flashcardSets.length ? flashcardSets.map((set) => <div className="saved-flashcard-row" key={set.id}><button className="quiz-row" onClick={() => openFlashcards(set)}><span className="quiz-row-icon"><Bookmark size={19} /></span><span className="quiz-row-info"><strong>{set.title}</strong><small>{set.cards.length} بطاقة · {new Date(set.createdAt).toLocaleDateString('ar')}</small></span><ChevronLeft size={18} /></button><button className="icon-btn delete-btn" aria-label="حذف المجموعة" onClick={() => void deleteFlashcardSet(set)}><Trash2 size={16} /></button></div>) : <p className="muted-text">لا توجد بطاقات محفوظة.</p>}
+            </div>
+          </> : <>
+            <div className="flashcard-session-head"><button className="back-link" onClick={() => setActiveFlashcards(null)}><ArrowRight size={16} /> كل المجموعات</button><span>{flashcardIndex + 1} / {activeFlashcards.cards.length}</span></div>
+            <button className={'flashcard-face' + (flashcardRevealed ? ' revealed' : '')} onClick={() => setFlashcardRevealed((value) => !value)} aria-label="قلب بطاقة الحفظ">
+              <span className="flashcard-label">{flashcardRevealed ? 'الإجابة' : 'السؤال / المصطلح'}</span>
+              <strong>{flashcardRevealed ? activeFlashcards.cards[flashcardIndex]?.back : activeFlashcards.cards[flashcardIndex]?.front}</strong>
+              {activeFlashcards.cards[flashcardIndex]?.page && <small>مرجع المحاضرة: صفحة {activeFlashcards.cards[flashcardIndex].page}</small>}
+              <span className="flashcard-hint">{flashcardRevealed ? 'اضغط لإخفاء الإجابة' : 'اضغط لكشف الإجابة'}</span>
+            </button>
+            <div className="flashcard-controls"><button className="button-secondary" disabled={flashcardIndex === 0} onClick={() => { setFlashcardIndex((index) => index - 1); setFlashcardRevealed(false); }}><ChevronLeft size={17} /> السابقة</button><button className="primary-btn" onClick={() => { setFlashcardIndex((index) => (index + 1) % activeFlashcards.cards.length); setFlashcardRevealed(false); }}>التالية <ArrowRight size={17} /></button></div>
+            <div className="flashcard-dots">{activeFlashcards.cards.map((_, index) => <button key={index} aria-label={'فتح البطاقة ' + (index + 1)} className={index === flashcardIndex ? 'active' : ''} onClick={() => { setFlashcardIndex(index); setFlashcardRevealed(false); }} />)}</div>
+          </>}
+        </section>}
+
+        {view === 'settings' && <section className="page">
+          <div className="page-intro"><span className="eyebrow"><Settings size={15} /> تخصيص</span><h1>الإعدادات</h1><p>تحكم براحة القراءة والخصوصية المحلية.</p></div>
+          <div className="settings-card"><div className="settings-icon"><BookOpen size={21} /></div><div className="settings-copy"><h3>حجم النص</h3><p>كبّر أو صغّر نص المحاضرة والإجابات ليناسب شاشة هاتفك.</p><div className="font-size-control"><button className="button-secondary" onClick={() => setFontScale((value) => Math.max(80, value - 10))}>أصغر A−</button><strong>{fontScale}%</strong><button className="button-secondary" onClick={() => setFontScale((value) => Math.min(130, value + 10))}>أكبر A+</button></div></div></div>
+          <div className="settings-card"><div className="settings-icon purple"><BrainCircuit size={21} /></div><div className="settings-copy"><h3>المساعد الذكي</h3><p>يتطلب نشر وظيفة الخادم وإضافة GEMINI_API_KEY كـ Secret في إعدادات Cloudflare. المفتاح لا يُحفظ داخل الواجهة أو APK.</p><a className="external-link" href="https://ai.google.dev/gemini-api/docs/api-key" target="_blank" rel="noreferrer">طريقة إنشاء مفتاح API <ChevronLeft size={15} /></a></div></div>
+          <div className="settings-card"><div className="settings-icon teal"><WifiOff size={21} /></div><div className="settings-copy"><h3>الدراسة دون إنترنت</h3><p>المحاضرات والاختبارات والبطاقات المحفوظة تعمل محليًا. إجابات AI الجديدة تحتاج اتصالًا.</p><div className="offline-stats"><div><strong>{materials.length}</strong><span>محاضرات</span></div><div><strong>{quizzes.length}</strong><span>اختبارات</span></div><div><strong>{flashcardSets.length}</strong><span>مجموعات بطاقات</span></div></div></div></div>
+          <div className="settings-card danger-card"><div className="settings-icon danger"><Trash2 size={21} /></div><div className="settings-copy"><h3>حذف البيانات</h3><p>حذف المحاضرات والاختبارات والبطاقات نهائيًا من هذا الجهاز.</p><button className="button-danger" onClick={async () => { if (!window.confirm('حذف كل المحاضرات والاختبارات والبطاقات من هذا الجهاز؟ لا يمكن التراجع.')) return; for (const material of materials) await removeMaterial(material.id); for (const set of flashcardSets) await removeFlashcardSet(set.id); setActiveFlashcards(null); await refreshLocalData(); setNotice('حُذفت البيانات المحلية.'); }}>حذف جميع البيانات</button></div></div>
         </section>}
 
         <nav className="mobile-nav" aria-label="التنقل الرئيسي للهاتف">
