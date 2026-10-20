@@ -39,4 +39,21 @@ export interface SavedQuiz {
   answers: number[];
   score: number;
   createdAt: number;
+  durationMinutes?: number;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  completedAt?: number;
+}
+
+export interface Flashcard {
+  front: string;
+  back: string;
+  page?: number;
+}
+
+export interface SavedFlashcardSet {
+  id: string;
+  materialId: string;
+  title: string;
+  cards: Flashcard[];
+  createdAt: number;
 }
