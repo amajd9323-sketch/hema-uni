@@ -127,6 +127,8 @@ export default function App() {
     const remaining = materials.filter((item) => item.id !== material.id);
     setMaterials(remaining);
     setQuizzes((current) => current.filter((quiz) => quiz.materialId !== material.id));
+    setFlashcardSets((current) => current.filter((set) => set.materialId !== material.id));
+    if (activeFlashcards?.materialId === material.id) setActiveFlashcards(null);
     if (selectedId === material.id) {
       setSelectedId(remaining[0]?.id || '');
       setResult(null);
@@ -209,12 +211,13 @@ export default function App() {
   }
 
   function openQuiz(quiz: SavedQuiz) {
+    const isCompleted = Boolean(quiz.completedAt);
     setActiveQuiz(quiz);
-    setAnswers(Array(quiz.questions.length).fill(-1));
-    setGraded(false);
+    setAnswers(isCompleted && quiz.answers?.length === quiz.questions.length ? [...quiz.answers] : Array(quiz.questions.length).fill(-1));
+    setGraded(isCompleted);
     setQuestionIndex(0);
     setTimeRemaining((quiz.durationMinutes || 0) * 60);
-    setTimerActive(Boolean(quiz.durationMinutes));
+    setTimerActive(Boolean(quiz.durationMinutes) && !isCompleted);
     setExamMode(true);
     setView('quiz');
   }
@@ -298,7 +301,15 @@ export default function App() {
   }, [timerActive, view, graded, timeRemaining, activeQuiz, answers]);
 
   useEffect(() => {
+    try {
+      const savedScale = Number(window.localStorage.getItem('hema-uni-font-scale'));
+      if (savedScale >= 80 && savedScale <= 130) setFontScale(savedScale);
+    } catch { /* storage may be blocked */ }
+  }, []);
+
+  useEffect(() => {
     document.documentElement.style.setProperty('--study-font-scale', String(fontScale / 100));
+    try { window.localStorage.setItem('hema-uni-font-scale', String(fontScale)); } catch { /* storage may be blocked */ }
     return () => document.documentElement.style.removeProperty('--study-font-scale');
   }, [fontScale]);
 
@@ -517,4 +528,103 @@ function QuestionCard({ item, index, answer, graded, onAnswer, onPage }: { item:
     </label>)}</div>
     {graded && <div className="explanation"><strong>التفسير:</strong> {item.explanation || 'راجع الصفحة المشار إليها في المحاضرة.'}</div>}
   </article>;
+}
+
+function PdfReader({ file }: { file: Blob }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [pdfDocument, setPdfDocument] = useState<PDFDocument | null>(null);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageCount, setPageCount] = useState(0);
+  const [zoom, setZoom] = useState(1);
+  const [loadingPdf, setLoadingPdf] = useState(true);
+  const [rendering, setRendering] = useState(false);
+  const [readerError, setReaderError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    let loadingTask: ReturnType<typeof getDocument> | null = null;
+    setLoadingPdf(true);
+    setReaderError('');
+    setPdfDocument(null);
+    setPageNumber(1);
+    (async () => {
+      try {
+        const data = new Uint8Array(await file.arrayBuffer());
+        if (cancelled) return;
+        loadingTask = getDocument({ data });
+        const document = await loadingTask.promise;
+        if (cancelled) {
+          await document.destroy();
+          return;
+        }
+        setPdfDocument(document);
+        setPageCount(document.numPages);
+      } catch {
+        if (!cancelled) setReaderError('تعذر عرض صفحات PDF هنا. يمكنك الاستمرار باستخدام النص المستخرج أدناه.');
+      } finally {
+        if (!cancelled) setLoadingPdf(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (loadingTask) void loadingTask.destroy();
+    };
+  }, [file]);
+
+  useEffect(() => {
+    if (!pdfDocument || !canvasRef.current || pageNumber < 1) return;
+    let cancelled = false;
+    let renderTask: { cancel: () => void; promise: Promise<unknown> } | null = null;
+    (async () => {
+      try {
+        setRendering(true);
+        const page = await pdfDocument.getPage(pageNumber);
+        if (cancelled) return;
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Canvas unavailable');
+        const baseViewport = page.getViewport({ scale: 1 });
+        const availableWidth = Math.max(260, (canvas.parentElement?.clientWidth || 640) - 28);
+        const fitScale = Math.min(2.1, Math.max(0.4, availableWidth / baseViewport.width));
+        const viewport = page.getViewport({ scale: fitScale * zoom });
+        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.floor(viewport.width * ratio);
+        canvas.height = Math.floor(viewport.height * ratio);
+        canvas.style.width = viewport.width + 'px';
+        canvas.style.height = viewport.height + 'px';
+        renderTask = page.render({
+          canvasContext: context,
+          viewport,
+          transform: ratio === 1 ? undefined : [ratio, 0, 0, ratio, 0, 0]
+        });
+        await renderTask.promise;
+      } catch {
+        if (!cancelled) setReaderError('تعذر رسم الصفحة الحالية. جرّب تغيير التكبير أو الانتقال لصفحة أخرى.');
+      } finally {
+        if (!cancelled) setRendering(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      renderTask?.cancel();
+    };
+  }, [pdfDocument, pageNumber, zoom]);
+
+  return <section className="pdf-reader">
+    <div className="pdf-reader-toolbar">
+      <div><FileText size={17} /><strong>قارئ المحاضرة</strong><span>{pageCount ? pageNumber + ' / ' + pageCount : 'PDF'}</span></div>
+      <div className="pdf-reader-controls">
+        <button className="icon-btn" title="تصغير" aria-label="تصغير" disabled={zoom <= 0.65} onClick={() => setZoom((value) => Math.max(0.65, Number((value - 0.15).toFixed(2))))}>−</button>
+        <span>{Math.round(zoom * 100)}%</span>
+        <button className="icon-btn" title="تكبير" aria-label="تكبير" disabled={zoom >= 1.6} onClick={() => setZoom((value) => Math.min(1.6, Number((value + 0.15).toFixed(2))))}>+</button>
+        <button className="icon-btn" title="الصفحة السابقة" aria-label="الصفحة السابقة" disabled={pageNumber <= 1} onClick={() => setPageNumber((value) => Math.max(1, value - 1))}><ChevronLeft size={17} /></button>
+        <button className="icon-btn" title="الصفحة التالية" aria-label="الصفحة التالية" disabled={!pageCount || pageNumber >= pageCount} onClick={() => setPageNumber((value) => Math.min(pageCount, value + 1))}><ArrowRight size={17} /></button>
+      </div>
+    </div>
+    {(loadingPdf || rendering) && <div className="pdf-reader-status"><Loader2 className="spin" size={16} /> {loadingPdf ? 'تحميل الملف...' : 'عرض الصفحة...'}</div>}
+    {readerError && <div className="reader-warning"><AlertCircle size={15} />{readerError}</div>}
+    <div className="pdf-canvas-stage"><canvas ref={canvasRef} aria-label={'صفحة PDF رقم ' + pageNumber} /></div>
+    <div className="pdf-reader-footer"><span>النص قابل للتحديد في قسم «نص المحاضرة» أسفل المساعد.</span><span>{pageCount ? 'صفحة ' + pageNumber + ' من ' + pageCount : ''}</span></div>
+  </section>;
 }
