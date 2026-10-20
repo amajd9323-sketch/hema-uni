@@ -118,6 +118,9 @@ export default function App() {
       await saveMaterial(material);
       setMaterials((current) => [material, ...current]);
       setSelectedId(material.id);
+      setSelectedText('');
+      setSelectedPage(undefined);
+      setQuestion('');
       setResult(null);
       setView('study');
       setNotice('أُضيفت المحاضرة إلى مكتبتك على هذا الجهاز.');
@@ -142,6 +145,9 @@ export default function App() {
     if (activeFlashcards?.materialId === material.id) setActiveFlashcards(null);
     if (selectedId === material.id) {
       setSelectedId(remaining[0]?.id || '');
+      setSelectedText('');
+      setSelectedPage(undefined);
+      setQuestion('');
       setResult(null);
     }
     setNotice('حُذفت المحاضرة والاختبارات المرتبطة بها.');
@@ -471,7 +477,7 @@ export default function App() {
           </div>
 
           <div className="section-heading recent-heading"><div><h2>آخر محاضراتك</h2><p>تُحفظ على هذا الجهاز</p></div><button className="text-btn" onClick={() => setView('library')}>عرض المكتبة <ChevronLeft size={15} /></button></div>
-          {materials.length ? <MaterialList materials={materials.slice(0, 4)} onOpen={(item) => { setSelectedId(item.id); setView('study'); setResult(null); }} onDelete={deleteMaterial} /> : <EmptyState onUpload={() => uploadRef.current?.click()} />}
+          {materials.length ? <MaterialList materials={materials.slice(0, 4)} onOpen={(item) => { setSelectedId(item.id); setSelectedText(''); setSelectedPage(undefined); setQuestion(''); setView('study'); setResult(null); }} onDelete={deleteMaterial} /> : <EmptyState onUpload={() => uploadRef.current?.click()} />}
         </section>}
 
         {view === 'library' && <section className="page">
