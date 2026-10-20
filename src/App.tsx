@@ -3,14 +3,38 @@ import type { ChangeEvent, FormEvent } from 'react';
 import {
   AlertCircle, ArrowRight, BookOpen, BrainCircuit, CheckCircle2, ChevronLeft,
   FileText, FileUp, GraduationCap, Home, Library, Loader2, MessageCircle,
-  Send, Sparkles, Trash2, WifiOff, X
+  Send, Sparkles, Trash2, WifiOff, X, Mic, Bookmark, RotateCcw, Settings, Clock3
 } from 'lucide-react';
 import { extractPdf } from './lib/pdf';
-import { runTutor, type TutorAction, type TutorResponse } from './lib/ai';
-import { listMaterials, listQuizzes, removeMaterial, saveMaterial, saveQuiz } from './lib/storage';
-import type { Material, QuizQuestion, SavedQuiz } from './types';
+import { runTutor, type TutorAction, type TutorResponse, type TutorDifficulty } from './lib/ai';
+import { listMaterials, listQuizzes, listFlashcardSets, removeMaterial, saveMaterial, saveQuiz, saveFlashcardSet, removeFlashcardSet } from './lib/storage';
+import type { Material, QuizQuestion, SavedQuiz, SavedFlashcardSet } from './types';
+import { getDocument } from 'pdfjs-dist';
 
-type View = 'home' | 'library' | 'study' | 'quiz';
+type View = 'home' | 'library' | 'study' | 'quiz' | 'flashcards' | 'settings';
+type SpeechResultEvent = { results: ArrayLike<ArrayLike<{ transcript: string }>> };
+type SpeechRecognitionLike = {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onresult: ((event: SpeechResultEvent) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+type SpeechWindow = Window & {
+  SpeechRecognition?: new () => SpeechRecognitionLike;
+  webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+};
+
+function formatTime(totalSeconds: number) {
+  const minutes = Math.floor(Math.max(0, totalSeconds) / 60);
+  const seconds = Math.max(0, totalSeconds) % 60;
+  return String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+}
+
+type PDFDocument = Awaited<ReturnType<typeof getDocument>['promise']>;
 
 function formatSize(bytes: number) {
   if (bytes < 1024 * 1024) return Math.max(1, Math.round(bytes / 1024)) + ' KB';
@@ -31,16 +55,33 @@ export default function App() {
   const [activeQuiz, setActiveQuiz] = useState<SavedQuiz | null>(null);
   const [answers, setAnswers] = useState<number[]>([]);
   const [graded, setGraded] = useState(false);
+  const [flashcardSets, setFlashcardSets] = useState<SavedFlashcardSet[]>([]);
+  const [activeFlashcards, setActiveFlashcards] = useState<SavedFlashcardSet | null>(null);
+  const [flashcardIndex, setFlashcardIndex] = useState(0);
+  const [flashcardRevealed, setFlashcardRevealed] = useState(false);
+  const [selectedText, setSelectedText] = useState('');
+  const [selectedPage, setSelectedPage] = useState<number | undefined>(undefined);
+  const [listening, setListening] = useState(false);
+  const [questionCount, setQuestionCount] = useState(10);
+  const [difficulty, setDifficulty] = useState<TutorDifficulty>('medium');
+  const [examDuration, setExamDuration] = useState(15);
+  const [timeRemaining, setTimeRemaining] = useState(0);
+  const [timerActive, setTimerActive] = useState(false);
+  const [examMode, setExamMode] = useState(true);
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [fontScale, setFontScale] = useState(100);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
 
   const selected = useMemo(() => materials.find((material) => material.id === selectedId) ?? null, [materials, selectedId]);
 
   async function refreshLocalData() {
-    const [savedMaterials, savedQuizzes] = await Promise.all([listMaterials(), listQuizzes()]);
+    const [savedMaterials, savedQuizzes, savedFlashcards] = await Promise.all([listMaterials(), listQuizzes(), listFlashcardSets()]);
     setMaterials(savedMaterials);
     setQuizzes(savedQuizzes);
-    setSelectedId((current) => current || savedMaterials[0]?.id || '');
+    setFlashcardSets(savedFlashcards);
+    setSelectedId((current) => savedMaterials.some((material) => material.id === current) ? current : savedMaterials[0]?.id || '');
   }
 
   useEffect(() => {
@@ -93,7 +134,7 @@ export default function App() {
     setNotice('حُذفت المحاضرة والاختبارات المرتبطة بها.');
   }
 
-  async function ask(action: TutorAction) {
+  async function ask(action: TutorAction, focusText?: string, focusPage?: number) {
     if (!selected) {
       setError('ارفع محاضرة PDF أولًا.');
       return;
@@ -108,9 +149,28 @@ export default function App() {
     setNotice('');
     setResult(null);
     try {
-      const response = await runTutor(selected, action, question.trim());
+      const response = await runTutor(selected, action, question.trim(), {
+        selectedText: action === 'explain' ? (focusText || selectedText) : undefined,
+        selectedPage: action === 'explain' ? (focusPage || selectedPage) : undefined,
+        questionCount,
+        difficulty
+      });
       setResult(response);
-      if (action === 'quiz' && response.questions?.length) {
+      if (action === 'flashcards' && response.flashcards?.length) {
+        const set: SavedFlashcardSet = {
+          id: crypto.randomUUID(),
+          materialId: selected.id,
+          title: 'بطاقات: ' + selected.name,
+          cards: response.flashcards,
+          createdAt: Date.now()
+        };
+        await saveFlashcardSet(set);
+        setFlashcardSets((current) => [set, ...current]);
+        setActiveFlashcards(set);
+        setFlashcardIndex(0);
+        setFlashcardRevealed(false);
+        setView('flashcards');
+      } else if (action === 'quiz' && response.questions?.length) {
         const quiz: SavedQuiz = {
           id: crypto.randomUUID(),
           materialId: selected.id,
@@ -118,13 +178,19 @@ export default function App() {
           questions: response.questions,
           answers: Array(response.questions.length).fill(-1),
           score: 0,
-          createdAt: Date.now()
+          createdAt: Date.now(),
+          durationMinutes: examDuration,
+          difficulty
         };
         await saveQuiz(quiz);
         setQuizzes((current) => [quiz, ...current]);
         setActiveQuiz(quiz);
         setAnswers(quiz.answers);
         setGraded(false);
+        setQuestionIndex(0);
+        setTimeRemaining(examDuration * 60);
+        setTimerActive(examDuration > 0);
+        setExamMode(true);
         setView('quiz');
       } else {
         window.setTimeout(() => chatRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
@@ -144,25 +210,101 @@ export default function App() {
 
   function openQuiz(quiz: SavedQuiz) {
     setActiveQuiz(quiz);
-    setAnswers(quiz.answers?.length === quiz.questions.length ? [...quiz.answers] : Array(quiz.questions.length).fill(-1));
+    setAnswers(Array(quiz.questions.length).fill(-1));
     setGraded(false);
+    setQuestionIndex(0);
+    setTimeRemaining((quiz.durationMinutes || 0) * 60);
+    setTimerActive(Boolean(quiz.durationMinutes));
+    setExamMode(true);
     setView('quiz');
   }
 
+  function openFlashcards(set: SavedFlashcardSet) {
+    setActiveFlashcards(set);
+    setFlashcardIndex(0);
+    setFlashcardRevealed(false);
+    setView('flashcards');
+  }
+
+  async function deleteFlashcardSet(set: SavedFlashcardSet) {
+    if (!window.confirm('حذف مجموعة البطاقات من هذا الجهاز؟')) return;
+    await removeFlashcardSet(set.id);
+    setFlashcardSets((current) => current.filter((item) => item.id !== set.id));
+    if (activeFlashcards?.id === set.id) setActiveFlashcards(null);
+    setNotice('حُذفت مجموعة البطاقات.');
+  }
+
+  function startVoiceInput() {
+    const speechWindow = window as SpeechWindow;
+    const SpeechRecognition = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setError('الإملاء الصوتي غير مدعوم في هذا المتصفح. جرّب Chrome على الهاتف أو استخدم لوحة المفاتيح الصوتية.');
+      return;
+    }
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'ar';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.onresult = (event) => {
+        const transcript = event.results[0]?.[0]?.transcript?.trim();
+        if (transcript) setQuestion((current) => current ? current + ' ' + transcript : transcript);
+      };
+      recognition.onerror = () => {
+        setListening(false);
+        setError('تعذر التقاط الصوت. تأكد من إذن الميكروفون ثم حاول مجددًا.');
+      };
+      recognition.onend = () => {
+        setListening(false);
+        recognitionRef.current = null;
+      };
+      recognitionRef.current = recognition;
+      recognition.start();
+      setListening(true);
+      setError('');
+    } catch {
+      setListening(false);
+      setError('تعذر بدء الإملاء الصوتي.');
+    }
+  }
+
   async function gradeQuiz() {
-    if (!activeQuiz) return;
+    if (!activeQuiz || graded) return;
     const score = activeQuiz.questions.reduce((sum, item, index) => sum + (answers[index] === item.correctIndex ? 1 : 0), 0);
-    const updated: SavedQuiz = { ...activeQuiz, answers: [...answers], score };
+    const updated: SavedQuiz = { ...activeQuiz, answers: [...answers], score, completedAt: Date.now() };
     await saveQuiz(updated);
     setActiveQuiz(updated);
     setQuizzes((current) => current.map((quiz) => quiz.id === updated.id ? updated : quiz));
     setGraded(true);
+    setTimerActive(false);
   }
 
   function jumpToPage(page: number) {
+    setSelectedPage(page);
     setView('study');
     window.setTimeout(() => document.getElementById('page-' + page)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
   }
+
+  useEffect(() => {
+    if (!timerActive || view !== 'quiz' || graded) return;
+    if (timeRemaining <= 0) {
+      setTimerActive(false);
+      void gradeQuiz();
+      setNotice('انتهى وقت الاختبار؛ حُفظت نتيجتك.');
+      return;
+    }
+    const timer = window.setTimeout(() => setTimeRemaining((remaining) => Math.max(0, remaining - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [timerActive, view, graded, timeRemaining, activeQuiz, answers]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--study-font-scale', String(fontScale / 100));
+    return () => document.documentElement.style.removeProperty('--study-font-scale');
+  }, [fontScale]);
+
+  useEffect(() => () => {
+    recognitionRef.current?.stop();
+  }, []);
 
   return (
     <div className="app-shell">
