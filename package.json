@@ -1,0 +1,34 @@
+{
+  "name": "hema-uni",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "مساعد دراسي ذكي لطلاب جامعة الأزهر بغزة",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "check": "tsc -b --pretty false",
+    "cap:add:android": "cap add android",
+    "cap:sync": "npm run build && cap sync android",
+    "cap:open:android": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "idb": "^8.0.3",
+    "lucide-react": "^0.468.0",
+    "pdfjs-dist": "^5.4.149",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.0.0",
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "@vitejs/plugin-react": "^5.0.2",
+    "typescript": "~5.9.2",
+    "vite": "^7.1.5",
+    "vite-plugin-pwa": "^1.0.3"
+  }
+}
