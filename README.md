@@ -29,13 +29,24 @@ npm install
 npm run dev
 ~~~
 
-فحص TypeScript وبناء الموقع:
+فحص TypeScript وبناء الموقع عبر Vite:
 
 ~~~bash
 npm run check
 npm run build
 npm run preview
 ~~~
+
+لتشغيل Pages Functions محليًا مع مسار AI:
+1. انسخ .dev.vars.example إلى .dev.vars.
+2. ضع مفتاحك الخاص في GEMINI_API_KEY داخل .dev.vars.
+3. شغّل:
+
+~~~bash
+npm run dev:pages
+~~~
+
+يفتح Wrangler نسخة Pages محلية، بما فيها المسار /api/ai. تشغيل npm run dev وحده يشغّل واجهة Vite فقط ولا يشغّل Pages Functions. لا ترفع ملف .dev.vars إلى Git.
 
 ## إعداد Gemini API
 
@@ -44,7 +55,7 @@ npm run preview
 3. اختياريًا أضف GEMINI_MODEL. الافتراضي في الخادم gemini-2.5-flash.
 4. أعد النشر ثم اختبر شرح ملف PDF.
 
-لا تضف المفتاح إلى متغيرات VITE أو إلى ملف متعقّب في Git. يرسل التطبيق مقتطفات الصفحات الضرورية فقط عند طلب AI. راجع شروط مزود AI وحصصه وحدوده؛ لا يوجد ضمان لاستخدام مجاني غير محدود.
+لا تضف المفتاح إلى متغيرات VITE أو إلى ملف متعقّب في Git. يرسل التطبيق مقتطفات الصفحات الضرورية فقط عند طلب AI. وظيفة الخادم لديها تحديد طلبات مبدئي لكل IP داخل كل Worker instance، لكنه دفاع best-effort وليس حدًا عالميًا مضمونًا؛ أضف قاعدة rate-limiting من لوحة Cloudflare قبل نشر التطبيق للعموم. راجع شروط مزود AI وحصصه وحدوده؛ لا يوجد ضمان لاستخدام مجاني غير محدود.
 
 ## نشر الويب
 
