@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
+import { App as CapacitorApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -415,6 +417,40 @@ export default function App() {
   useEffect(() => () => {
     recognitionRef.current?.stop();
   }, []);
+
+  useEffect(() => {
+    if (Capacitor.getPlatform() === 'web') return;
+    let disposed = false;
+    const listenerPromise = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+      if (activeFlashcards) {
+        setActiveFlashcards(null);
+        setFlashcardIndex(0);
+        setFlashcardRevealed(false);
+        return;
+      }
+      if (view === 'quiz' && activeQuiz) {
+        if (!graded && !window.confirm('الخروج من الامتحان؟ ستفقد إجابات هذه المحاولة غير المسلّمة.')) return;
+        setActiveQuiz(null);
+        setGraded(false);
+        setTimerActive(false);
+        return;
+      }
+      if (view !== 'home') {
+        setView('home');
+        setQuestion('');
+        setResult(null);
+        return;
+      }
+      if (!canGoBack) void CapacitorApp.exitApp();
+    });
+    void listenerPromise.then((listener) => {
+      if (disposed) void listener.remove();
+    });
+    return () => {
+      disposed = true;
+      void listenerPromise.then((listener) => listener.remove());
+    };
+  }, [view, activeQuiz, activeFlashcards, graded]);
 
   return (
     <div className="app-shell">
