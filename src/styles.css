@@ -246,3 +246,39 @@ a { color: inherit; text-decoration: none; }
   .question-card h3 { font-size: 13px; }
   .choice { padding: 9px; font-size: 11px; }
 }
+
+
+.mobile-nav { display: none; }
+@media (max-width: 780px) {
+  .mobile-nav {
+    position: fixed;
+    z-index: 30;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    padding: 8px 9px calc(8px + env(safe-area-inset-bottom));
+    border-top: 1px solid #2a3146;
+    background: #0c101cf5;
+    backdrop-filter: blur(18px);
+  }
+  .mobile-nav-item {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 5px 2px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    color: #8994ad;
+    background: transparent;
+    font-size: 9px;
+  }
+  .mobile-nav-item.active { color: #c7b6ff; border-color: #51407866; background: #28203e; }
+  .mobile-nav-item.active svg { color: #bda7ff; }
+  .app-shell { padding-bottom: 78px; }
+}
