@@ -156,7 +156,7 @@ export default function App() {
     try {
       const response = await runTutor(selected, action, question.trim(), {
         selectedText: action === 'explain' ? (focusText || selectedText) : undefined,
-        selectedPage: action === 'explain' ? (focusPage || selectedPage) : undefined,
+        selectedPage: focusPage || selectedPage,
         questionCount,
         difficulty
       });
