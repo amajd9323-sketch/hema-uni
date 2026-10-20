@@ -354,6 +354,25 @@ export default function App() {
     }
   }
 
+  async function restartQuiz() {
+    if (!activeQuiz) return;
+    const restarted: SavedQuiz = {
+      ...activeQuiz,
+      answers: Array(activeQuiz.questions.length).fill(-1),
+      score: 0,
+      completedAt: undefined
+    };
+    await saveQuiz(restarted);
+    setActiveQuiz(restarted);
+    setQuizzes((current) => current.map((quiz) => quiz.id === restarted.id ? restarted : quiz));
+    setAnswers(restarted.answers);
+    setGraded(false);
+    setQuestionIndex(0);
+    setTimeRemaining((restarted.durationMinutes || 0) * 60);
+    setTimerActive(Boolean(restarted.durationMinutes));
+    setExamMode(true);
+  }
+
   function jumpToPage(page: number) {
     setSelectedPage(page);
     setView('study');
@@ -526,7 +545,7 @@ export default function App() {
             {(examMode ? activeQuiz.questions.map((item, index) => ({ item, index })).filter(({ index }) => index === questionIndex) : activeQuiz.questions.map((item, index) => ({ item, index }))).map(({ item, index }) => <QuestionCard key={activeQuiz.id + '-' + index} item={item} index={index} answer={answers[index] ?? -1} graded={graded} onAnswer={(value) => setAnswers((current) => { const next = [...current]; next[index] = value; return next; })} onPage={jumpToPage} />)}
             {examMode && !graded && <div className="exam-question-nav"><button className="button-secondary" disabled={questionIndex === 0} onClick={() => setQuestionIndex((index) => Math.max(0, index - 1))}><ChevronLeft size={16} /> السابق</button><span>السؤال {questionIndex + 1} من {activeQuiz.questions.length}</span>{questionIndex < activeQuiz.questions.length - 1 ? <button className="primary-btn small" onClick={() => setQuestionIndex((index) => Math.min(activeQuiz.questions.length - 1, index + 1))}>التالي <ArrowRight size={15} /></button> : <button className="primary-btn small" onClick={() => void gradeQuiz()}>تسليم الامتحان <CheckCircle2 size={15} /></button>}</div>}
             {graded && activeQuiz.questions.some((item, index) => answers[index] !== item.correctIndex) && <div className="mistake-review"><div className="section-heading"><div><h2>مراجعة الأخطاء</h2><p>أسئلة تحتاج إلى مراجعة</p></div></div>{activeQuiz.questions.map((item, index) => ({ item, index })).filter(({ item, index }) => answers[index] !== item.correctIndex).map(({ item, index }) => <QuestionCard key={'review-' + activeQuiz.id + '-' + index} item={item} index={index} answer={answers[index] ?? -1} graded onAnswer={() => undefined} onPage={jumpToPage} />)}</div>}
-            <div className="quiz-bottom">{graded ? <button className="primary-btn" onClick={() => { setAnswers(Array(activeQuiz.questions.length).fill(-1)); setGraded(false); setQuestionIndex(0); setTimeRemaining((activeQuiz.durationMinutes || 0) * 60); setTimerActive(Boolean(activeQuiz.durationMinutes)); }}>{'أعد الاختبار'} <RotateCcw size={16} /></button> : !examMode && <button className="primary-btn" onClick={() => void gradeQuiz()}>تصحيح الإجابات <ArrowRight size={16} /></button>}</div>
+            <div className="quiz-bottom">{graded ? <button className="primary-btn" onClick={() => void restartQuiz()}>{'أعد الاختبار'} <RotateCcw size={16} /></button> : !examMode && <button className="primary-btn" onClick={() => void gradeQuiz()}>تصحيح الإجابات <ArrowRight size={16} /></button></div>
           </div>}
         </section>}
 
