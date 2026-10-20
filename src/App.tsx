@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   AlertCircle, ArrowRight, BookOpen, BrainCircuit, CheckCircle2, ChevronLeft,
   FileText, FileUp, GraduationCap, Home, Library, Loader2, MessageCircle,
@@ -509,7 +511,7 @@ export default function App() {
                 <p className="privacy-note"><AlertCircle size={14} /> عند استخدام AI، تُرسل مقتطفات من الصفحات المختارة إلى مزود الخدمة عبر الخادم.</p>
                 {result && <div className="answer-box" ref={chatRef}>
                   <div className="answer-title"><Sparkles size={17} /><strong>{result.model ? 'إجابة المساعد' : 'النتيجة'}</strong></div>
-                  <div className="answer-text">{result.text}</div>
+                  <div className="answer-text markdown-body"><ReactMarkdown remarkPlugins={[remarkGfm]}>{result.text}</ReactMarkdown></div>
                   {!!result.citations?.length && <div className="citations"><strong>المصادر من المحاضرة</strong>{result.citations.map((citation, index) => <button className="citation-chip" key={citation.page + '-' + index} onClick={() => jumpToPage(citation.page)}><FileText size={14} /> صفحة {citation.page}{citation.quote ? ' — ' + citation.quote.slice(0, 70) : ''}</button>)}</div>}
                 </div>}
               </div>
