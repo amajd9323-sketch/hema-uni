@@ -282,3 +282,120 @@ a { color: inherit; text-decoration: none; }
   .mobile-nav-item.active svg { color: #bda7ff; }
   .app-shell { padding-bottom: 78px; }
 }
+
+
+/* PDF reader and text selection */
+.pdf-reader { overflow: hidden; margin: 0 0 17px; border: 1px solid #293149; border-radius: 16px; background: #0d121f; }
+.pdf-reader-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-bottom: 1px solid #293149; background: #12192a; }
+.pdf-reader-toolbar > div:first-child, .pdf-reader-controls { display: flex; align-items: center; gap: 9px; }
+.pdf-reader-toolbar > div:first-child { min-width: 0; color: #b9a4ff; }
+.pdf-reader-toolbar strong { color: #e7eaf6; font-size: 12px; }
+.pdf-reader-toolbar span, .pdf-reader-footer { color: #8490a8; font-size: 10px; }
+.pdf-reader-controls { flex-wrap: wrap; justify-content: flex-end; }
+.pdf-reader-controls > span { min-width: 38px; text-align: center; }
+.pdf-canvas-stage { display: flex; justify-content: center; align-items: flex-start; min-height: 180px; max-height: 70vh; overflow: auto; padding: 16px; background: #080c15; overscroll-behavior: contain; }
+.pdf-canvas-stage canvas { display: block; flex: 0 0 auto; max-width: none; background: #fff; box-shadow: 0 8px 28px #0008; }
+.pdf-reader-status { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px; color: #a9a2df; font-size: 11px; }
+.reader-warning { display: flex; align-items: flex-start; gap: 7px; margin: 10px 12px; padding: 10px; border: 1px solid #70562c; border-radius: 10px; color: #f2d6a2; background: #292113; font-size: 11px; line-height: 1.7; }
+.pdf-reader-footer { display: flex; justify-content: space-between; gap: 10px; padding: 10px 13px; border-top: 1px solid #252d41; }
+
+/* voice input and selected excerpt */
+.form-buttons { display: flex; align-items: center; gap: 7px; }
+.icon-btn.listening { color: #ffb6c6; border-color: #9b3f5a; background: #361b27; animation: mic-pulse 1.2s ease-in-out infinite; }
+@keyframes mic-pulse { 50% { box-shadow: 0 0 0 5px #f472b61f; } }
+.selected-text-box { margin: 0 14px 15px; padding: 12px; border: 1px solid #51447b; border-radius: 12px; background: #1d1930; }
+.selected-text-box > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #c9baff; font-size: 10px; }
+.selected-text-box > div button { display: grid; place-items: center; border: 0; color: #b8add7; background: transparent; }
+.selected-text-box p { max-height: 115px; overflow: auto; margin: 9px 0 12px; color: #c6c3d8; font-size: calc(11px * var(--study-font-scale, 1)); line-height: 1.9; white-space: pre-wrap; }
+.page-explain-button { display: inline-flex; align-items: center; gap: 6px; margin-top: 9px; padding: 6px 8px; border: 1px solid #3e365f; border-radius: 8px; color: #c6b6ff; background: #1c1930; font-size: 10px; }
+.page-explain-button:hover { border-color: #8b5cf6; }
+
+/* exam builder, timed mode and error review */
+.exam-builder { display: grid; gap: 12px; padding: 20px; border: 1px solid #2a3349; border-radius: 16px; background: #101523; }
+.exam-builder label, .flashcard-create label { display: block; margin-bottom: 6px; color: #a3adc4; font-size: 11px; }
+.exam-builder select, .flashcard-create select { width: 100%; min-width: 0; padding: 11px; border: 1px solid #343e55; border-radius: 10px; color: #eef0fa; background: #0b111e; font-size: 12px; }
+.exam-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 3px; }
+.exam-options > div { min-width: 0; }
+.exam-builder .primary-btn { justify-self: start; }
+.exam-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 11px; padding: 10px 12px; border: 1px solid #283148; border-radius: 12px; background: #101523; }
+.exam-timer { display: inline-flex; align-items: center; gap: 7px; padding: 7px 10px; border: 1px solid #51447c; border-radius: 9px; color: #d0c4ff; background: #211a36; font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 700; }
+.mode-toggle { padding: 7px 10px; border: 1px solid #30394f; border-radius: 9px; color: #a8b2c7; background: #171d2c; font-size: 10px; }
+.mode-toggle.active { color: #75dfcf; border-color: #2d6158; background: #122a28; }
+.exam-count { margin-right: auto; color: #9aa5bb; font-size: 10px; }
+.exam-progress { overflow: hidden; height: 5px; margin: 0 0 16px; border-radius: 8px; background: #242b3d; }
+.exam-progress > div { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #31cbb3, #9472ff); transition: width .2s ease; }
+.exam-question-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; padding: 12px; border: 1px solid #2a3348; border-radius: 13px; background: #111726; }
+.exam-question-nav > span { color: #aeb8cd; font-size: 11px; }
+.button-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 10px 13px; border: 1px solid #354058; border-radius: 10px; color: #d1d7e7; background: #171e2e; font-size: 11px; }
+.button-secondary:hover:not(:disabled) { border-color: #6b58a0; }
+.button-secondary:disabled { opacity: .42; cursor: not-allowed; }
+.mistake-review { margin-top: 24px; padding-top: 12px; border-top: 1px solid #293249; }
+.quiz-bottom { margin-top: 14px; }
+.question-card h3, .choice, .explanation, .answer-text, .page-snippet p { font-size: calc(1em * var(--study-font-scale, 1)); }
+
+/* flashcards */
+.flashcard-create { display: grid; gap: 11px; margin-bottom: 25px; padding: 18px; border: 1px solid #2b344a; border-radius: 15px; background: #101523; }
+.flashcard-create .primary-btn { justify-self: start; }
+.saved-flashcard-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.saved-flashcard-row .quiz-row { margin: 0; }
+.saved-flashcard-row .icon-btn { flex: 0 0 auto; }
+.flashcard-session-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
+.flashcard-session-head > span { color: #a9b3c8; font-size: 11px; font-variant-numeric: tabular-nums; }
+.flashcard-face { width: 100%; min-height: min(390px, 48vh); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 28px; border: 1px solid #58468a; border-radius: 22px; color: #f0edff; background: radial-gradient(ellipse at 50% 0%, #6541a337, transparent 53%), linear-gradient(145deg, #17152a, #111b2a); box-shadow: 0 18px 50px #0002; text-align: center; transition: border-color .18s, background .18s; }
+.flashcard-face:hover { border-color: #a78bfa; }
+.flashcard-face.revealed { border-color: #2b7d72; background: radial-gradient(ellipse at 50% 0%, #207c6a30, transparent 53%), linear-gradient(145deg, #112320, #111b2a); }
+.flashcard-face strong { max-width: 720px; color: #f5f3ff; font-size: calc(20px * var(--study-font-scale, 1)); line-height: 2; white-space: pre-wrap; overflow-wrap: anywhere; }
+.flashcard-label { color: #baa6ff; font-size: 11px; }
+.flashcard-face.revealed .flashcard-label { color: #6ce1cf; }
+.flashcard-face small { color: #98a3bb; font-size: 10px; }
+.flashcard-hint { color: #7d89a2; font-size: 10px; }
+.flashcard-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; }
+.flashcard-dots { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin-top: 17px; }
+.flashcard-dots button { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 50%; background: #3c455c; }
+.flashcard-dots button.active { width: 22px; border-radius: 9px; background: #9f82fa; }
+
+/* settings */
+.settings-card { display: flex; align-items: flex-start; gap: 15px; margin-bottom: 13px; padding: 18px; border: 1px solid #293248; border-radius: 15px; background: #101523; }
+.settings-icon { flex: 0 0 auto; width: 42px; height: 42px; display: grid; place-items: center; border-radius: 12px; color: #90c9ff; background: #1c3047; }
+.settings-icon.purple { color: #c6b6ff; background: #30234f; }
+.settings-icon.teal { color: #6be1d0; background: #153b38; }
+.settings-icon.danger { color: #ffb6c6; background: #46202c; }
+.settings-copy { min-width: 0; flex: 1; }
+.settings-copy h3 { margin: 0 0 7px; color: #e8ebf6; font-size: 13px; }
+.settings-copy p { margin: 0 0 12px; color: #94a0b7; font-size: 11px; line-height: 1.9; }
+.font-size-control { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.font-size-control strong { min-width: 44px; color: #c5b4ff; text-align: center; font-size: 12px; }
+.settings-copy .external-link { display: inline-flex; align-items: center; gap: 5px; color: #bca7ff; font-size: 11px; }
+.offline-stats { display: flex; gap: 10px; flex-wrap: wrap; }
+.offline-stats > div { min-width: 75px; display: grid; gap: 4px; padding: 10px 12px; border: 1px solid #2a3e3d; border-radius: 10px; background: #122220; }
+.offline-stats strong { color: #73dfcf; font-size: 17px; }
+.offline-stats span { color: #9bb5b2; font-size: 10px; }
+.danger-card { border-color: #4a2c3b; }
+.button-danger { padding: 9px 12px; border: 1px solid #87445b; border-radius: 9px; color: #ffc1d0; background: #341923; font-size: 11px; }
+.button-danger:hover { background: #46202d; }
+
+/* mobile interaction */
+@media (max-width: 780px) {
+  .mobile-nav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .pdf-reader { margin-left: -3px; margin-right: -3px; }
+  .pdf-reader-toolbar { align-items: flex-start; flex-direction: column; }
+  .pdf-reader-controls { width: 100%; justify-content: space-between; }
+  .pdf-canvas-stage { max-height: 64vh; padding: 10px; }
+  .exam-options { grid-template-columns: 1fr; gap: 10px; }
+  .exam-builder { padding: 14px; }
+  .exam-question-nav { gap: 6px; }
+  .exam-question-nav .button-secondary, .exam-question-nav .primary-btn { padding: 9px; font-size: 10px; }
+  .exam-question-nav > span { font-size: 10px; }
+  .settings-card { padding: 13px; gap: 11px; }
+  .settings-icon { width: 36px; height: 36px; }
+  .flashcard-face { min-height: 43vh; padding: 22px 17px; }
+  .flashcard-face strong { font-size: calc(17px * var(--study-font-scale, 1)); }
+  .exam-toolbar { align-items: stretch; }
+  .exam-count { align-self: center; }
+}
+@media (max-width: 420px) {
+  .pdf-reader-toolbar strong { font-size: 11px; }
+  .pdf-reader-footer { flex-direction: column; gap: 4px; }
+  .flashcard-controls .button-secondary, .flashcard-controls .primary-btn { padding: 10px; font-size: 11px; }
+  .exam-timer { font-size: 11px; }
+}
