@@ -12,8 +12,34 @@ type Body = {
   difficulty?: 'easy' | 'medium' | 'hard';
 };
 
+const requestWindows = new Map<string, { start: number; count: number }>();
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const RATE_LIMIT_MAX_REQUESTS = 25;
+
+function isRateLimited(clientIp: string): boolean {
+  const now = Date.now();
+  const current = requestWindows.get(clientIp);
+  if (!current || now - current.start >= RATE_LIMIT_WINDOW_MS) {
+    requestWindows.set(clientIp, { start: now, count: 1 });
+  } else if (current.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return true;
+  } else {
+    current.count += 1;
+  }
+  if (requestWindows.size > 1000) {
+    for (const [ip, window] of requestWindows) {
+      if (now - window.start >= RATE_LIMIT_WINDOW_MS) requestWindows.delete(ip);
+    }
+  }
+  return false;
+}
+
 export const onRequestPost = async (context: { request: Request; env: Env }): Promise<Response> => {
   const { request, env } = context;
+  const clientIp = request.headers.get('CF-Connecting-IP');
+  if (clientIp && isRateLimited(clientIp)) return json({ error: 'طلبات كثيرة خلال فترة قصيرة. انتظر عدة دقائق ثم حاول مجددًا.' }, 429);
+  const declaredLength = Number(request.headers.get('content-length') || 0);
+  if (declaredLength > 50000) return json({ error: 'حجم الطلب كبير. جرّب سؤالًا أو مقاطع أقل.' }, 413);
   if (!env.GEMINI_API_KEY) return json({ error: 'المساعد الذكي غير مفعّل بعد. أضف GEMINI_API_KEY إلى أسرار Cloudflare.' }, 503);
 
   let rawBody: string;
@@ -27,6 +53,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
   let body: Body;
   try { body = JSON.parse(rawBody) as Body; }
   catch { return json({ error: 'صيغة الطلب غير صحيحة.' }, 400); }
+  if (!body || typeof body !== 'object') return json({ error: 'صيغة الطلب غير صحيحة.' }, 400);
 
   const supportedActions: Action[] = ['ask', 'summary', 'quiz', 'flashcards', 'explain'];
   if (!supportedActions.includes(body.action) || !Array.isArray(body.pages) || body.pages.length > 12) {
@@ -34,7 +61,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }): Pr
   }
 
   const pages = body.pages
-    .filter((page) => Number.isInteger(page.page) && page.page > 0 && typeof page.text === 'string')
+    .filter((page): page is PageInput => !!page && typeof page === 'object' && Number.isInteger(page.page) && page.page > 0 && typeof page.text === 'string')
     .map((page) => ({ page: page.page, text: page.text.slice(0, 1900) }));
   if (!pages.length || pages.reduce((sum, page) => sum + page.text.length, 0) > 24000) {
     return json({ error: 'لا توجد مقاطع صالحة أو أن النص طويل جدًا.' }, 413);
