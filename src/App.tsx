@@ -76,6 +76,7 @@ export default function App() {
   const [examMode, setExamMode] = useState(true);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [fontScale, setFontScale] = useState(100);
+  const [aiBaseUrl, setAiBaseUrl] = useState('');
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
@@ -285,6 +286,31 @@ export default function App() {
     setNotice('حُذفت الملاحظة.');
   }
 
+  function saveAiBaseUrl() {
+    const value = aiBaseUrl.trim();
+    if (!value) {
+      try { window.localStorage.removeItem('hema-uni-ai-base-url'); } catch { /* storage may be blocked */ }
+      setAiBaseUrl('');
+      setNotice('حُذف رابط خدمة AI. الموقع سيستخدم /api/ai من نفس النطاق، بينما أندرويد يحتاج رابطًا منشورًا.');
+      return;
+    }
+    try {
+      const url = new URL(value);
+      const localHttp = url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname);
+      if (url.protocol !== 'https:' && !localHttp) {
+        setError('استخدم رابط HTTPS كاملًا لخدمة AI، مثل https://your-project.pages.dev');
+        return;
+      }
+      const normalized = url.origin;
+      window.localStorage.setItem('hema-uni-ai-base-url', normalized);
+      setAiBaseUrl(normalized);
+      setError('');
+      setNotice('تم حفظ رابط خدمة AI على هذا الجهاز. جرّب الشرح أو الاختبار الآن.');
+    } catch {
+      setError('الرابط غير صالح. أدخل رابطًا كاملًا يبدأ بـ https://');
+    }
+  }
+
   function startVoiceInput() {
     if (listening) {
       recognitionRef.current?.stop();
@@ -405,6 +431,7 @@ export default function App() {
     try {
       const savedScale = Number(window.localStorage.getItem('hema-uni-font-scale'));
       if (savedScale >= 80 && savedScale <= 130) setFontScale(savedScale);
+      setAiBaseUrl(window.localStorage.getItem('hema-uni-ai-base-url') || '');
     } catch { /* storage may be blocked */ }
   }, []);
 
@@ -630,7 +657,7 @@ export default function App() {
         {view === 'settings' && <section className="page">
           <div className="page-intro"><span className="eyebrow"><Settings size={15} /> تخصيص</span><h1>الإعدادات</h1><p>تحكم براحة القراءة والخصوصية المحلية.</p></div>
           <div className="settings-card"><div className="settings-icon"><BookOpen size={21} /></div><div className="settings-copy"><h3>حجم النص</h3><p>كبّر أو صغّر نص المحاضرة والإجابات ليناسب شاشة هاتفك.</p><div className="font-size-control"><button className="button-secondary" onClick={() => setFontScale((value) => Math.max(80, value - 10))}>أصغر A−</button><strong>{fontScale}%</strong><button className="button-secondary" onClick={() => setFontScale((value) => Math.min(130, value + 10))}>أكبر A+</button></div></div></div>
-          <div className="settings-card"><div className="settings-icon purple"><BrainCircuit size={21} /></div><div className="settings-copy"><h3>المساعد الذكي</h3><p>يتطلب نشر وظيفة الخادم وإضافة GEMINI_API_KEY كـ Secret في إعدادات Cloudflare. المفتاح لا يُحفظ داخل الواجهة أو APK.</p><a className="external-link" href="https://ai.google.dev/gemini-api/docs/api-key" target="_blank" rel="noreferrer">طريقة إنشاء مفتاح API <ChevronLeft size={15} /></a></div></div>
+          <div className="settings-card"><div className="settings-icon purple"><BrainCircuit size={21} /></div><div className="settings-copy"><h3>المساعد الذكي</h3><p>انشر المشروع على Cloudflare Pages، ثم أضف GEMINI_API_KEY كـ Secret هناك. المفتاح لا يُحفظ داخل الواجهة أو APK.</p><label className="ai-url-label" htmlFor="ai-base-url">رابط خدمة AI (Cloudflare Pages)</label><input id="ai-base-url" className="ai-url-input" type="url" inputMode="url" autoComplete="url" placeholder="https://your-project.pages.dev" value={aiBaseUrl} onChange={(event) => setAiBaseUrl(event.target.value)} /><small className="ai-url-hint">على أندرويد، ضع رابط موقعك المنشور. مثال: https://your-project.pages.dev — لا تضف /api/ai.</small><div className="ai-url-actions"><button className="primary-btn small" onClick={saveAiBaseUrl}>حفظ رابط الخدمة</button><a className="external-link" href="https://ai.google.dev/gemini-api/docs/api-key" target="_blank" rel="noreferrer">إنشاء مفتاح API <ChevronLeft size={15} /></a></div></div></div>
           <div className="settings-card"><div className="settings-icon teal"><WifiOff size={21} /></div><div className="settings-copy"><h3>الدراسة دون إنترنت</h3><p>المحاضرات والاختبارات والبطاقات المحفوظة تعمل محليًا. إجابات AI الجديدة تحتاج اتصالًا.</p><div className="offline-stats"><div><strong>{materials.length}</strong><span>محاضرات</span></div><div><strong>{quizzes.length}</strong><span>اختبارات</span></div><div><strong>{flashcardSets.length}</strong><span>مجموعات بطاقات</span></div><div><strong>{notes.length}</strong><span>ملاحظات</span></div></div></div></div>
           <div className="settings-card danger-card"><div className="settings-icon danger"><Trash2 size={21} /></div><div className="settings-copy"><h3>حذف البيانات</h3><p>حذف المحاضرات والاختبارات والبطاقات نهائيًا من هذا الجهاز.</p><button className="button-danger" onClick={async () => { if (!window.confirm('حذف كل المحاضرات والاختبارات والبطاقات من هذا الجهاز؟ لا يمكن التراجع.')) return; for (const material of materials) await removeMaterial(material.id); for (const set of flashcardSets) await removeFlashcardSet(set.id); setActiveFlashcards(null); await refreshLocalData(); setNotice('حُذفت البيانات المحلية.'); }}>حذف جميع البيانات</button></div></div>
         </section>}
