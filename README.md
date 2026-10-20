@@ -14,7 +14,7 @@
 - دفتر ملاحظات محلي لحفظ مقتطفات مهمة وربطها باسم المحاضرة ورقم الصفحة.
 - إملاء صوتي للأسئلة عند دعم المتصفح Web Speech API.
 - ملفات المحاضرات والاختبارات والبطاقات والملاحظات محفوظة محليًا؛ لا حاجة لحساب طالب في الإصدار الأول.
-- Cloudflare Pages Function تتصل بـ Gemini server-side، فلا ينكشف مفتاح API في الواجهة أو APK.
+- Cloudflare Pages Function تتصل بـ Gemini server-side، فلا ينكشف مفتاح API في الواجهة أو APK. في Android، اضبط رابط Cloudflare Pages المنشور من الإعدادات بعد النشر.
 - GitHub Actions يبني نسخة الويب ويحاول إنشاء Android debug APK كـ Artifact.
 
 ## المتطلبات
@@ -55,6 +55,7 @@ npm run dev:pages
 2. في إعدادات Cloudflare Pages، أضف GEMINI_API_KEY كـ Secret.
 3. اختياريًا أضف GEMINI_MODEL. الافتراضي في الخادم gemini-2.5-flash.
 4. أعد النشر ثم اختبر شرح ملف PDF.
+5. على APK، افتح الإعدادات وأدخل رابط Pages الأساسي مثل https://your-project.pages.dev ثم احفظه. لا تضف /api/ai إلى نهاية الرابط.
 
 لا تضف المفتاح إلى متغيرات VITE أو إلى ملف متعقّب في Git. يرسل التطبيق مقتطفات الصفحات الضرورية فقط عند طلب AI. وظيفة الخادم لديها تحديد طلبات مبدئي لكل IP داخل كل Worker instance، لكنه دفاع best-effort وليس حدًا عالميًا مضمونًا؛ أضف قاعدة rate-limiting من لوحة Cloudflare قبل نشر التطبيق للعموم. راجع شروط مزود AI وحصصه وحدوده؛ لا يوجد ضمان لاستخدام مجاني غير محدود.
 
