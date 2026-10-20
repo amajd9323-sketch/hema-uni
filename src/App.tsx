@@ -516,7 +516,7 @@ export default function App() {
           {notes.length ? <div className="notes-list">{notes.map((note) => <article className="note-card" key={note.id}>
             <div className="note-card-head"><div><strong>{note.materialName}</strong><span>صفحة {note.page} · {new Date(note.createdAt).toLocaleDateString('ar')}</span></div><button className="icon-btn delete-btn" aria-label="حذف الملاحظة" onClick={() => void deleteNote(note)}><Trash2 size={15} /></button></div>
             <p>{note.text}</p>
-            <div className="note-actions"><button className="button-secondary" onClick={() => { setSelectedId(note.materialId); setSelectedText(note.text); setSelectedPage(note.page); setView('study'); setNotice('المقتطف جاهز للشرح من المساعد.'); }}>افتح مع المحاضرة <ChevronLeft size={14} /></button><button className="page-explain-button" onClick={() => GenUI_NOT_USED}> </button></div>
+            <div className="note-actions"><button className="button-secondary" onClick={() => { setSelectedId(note.materialId); setSelectedText(note.text); setSelectedPage(note.page); setQuestion('اشرح لي هذا المقتطف من المحاضرة مع مثال.'); setView('study'); window.setTimeout(() => document.getElementById('page-' + note.page)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150); }}>افتح مع المحاضرة <ChevronLeft size={14} /></button><button className="page-explain-button" onClick={() => { setSelectedId(note.materialId); setSelectedText(note.text); setSelectedPage(note.page); setQuestion('اشرح لي هذا المقتطف من المحاضرة مع مثال.'); setView('study'); }}>جهّز للشرح <BrainCircuit size={13} /></button></div>
           </article>)}</div> : <EmptyState onUpload={() => setView('library')} />}
         </section>}
 
