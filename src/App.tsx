@@ -411,7 +411,7 @@ export default function App() {
   useEffect(() => {
     document.documentElement.style.setProperty('--study-font-scale', String(fontScale / 100));
     try { window.localStorage.setItem('hema-uni-font-scale', String(fontScale)); } catch { /* storage may be blocked */ }
-    return () => document.documentElement.style.removeProperty('--study-font-scale');
+    return () => { document.documentElement.style.removeProperty('--study-font-scale'); };
   }, [fontScale]);
 
   useEffect(() => () => {
@@ -739,6 +739,7 @@ function PdfReader({ file }: { file: Blob }) {
         canvas.style.width = viewport.width + 'px';
         canvas.style.height = viewport.height + 'px';
         renderTask = page.render({
+          canvas,
           canvasContext: context,
           viewport,
           transform: ratio === 1 ? undefined : [ratio, 0, 0, ratio, 0, 0]
