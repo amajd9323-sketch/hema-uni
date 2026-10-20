@@ -7,11 +7,11 @@ import {
 } from 'lucide-react';
 import { extractPdf } from './lib/pdf';
 import { runTutor, type TutorAction, type TutorResponse, type TutorDifficulty } from './lib/ai';
-import { listMaterials, listQuizzes, listFlashcardSets, removeMaterial, saveMaterial, saveQuiz, saveFlashcardSet, removeFlashcardSet } from './lib/storage';
-import type { Material, QuizQuestion, SavedQuiz, SavedFlashcardSet } from './types';
+import { listMaterials, listQuizzes, listFlashcardSets, listStudyNotes, removeMaterial, saveMaterial, saveQuiz, saveFlashcardSet, removeFlashcardSet, saveStudyNote, removeStudyNote } from './lib/storage';
+import type { Material, QuizQuestion, SavedQuiz, SavedFlashcardSet, StudyNote } from './types';
 import { getDocument } from 'pdfjs-dist';
 
-type View = 'home' | 'library' | 'study' | 'quiz' | 'flashcards' | 'settings';
+type View = 'home' | 'library' | 'study' | 'quiz' | 'flashcards' | 'notes' | 'settings';
 type SpeechResultEvent = { results: ArrayLike<ArrayLike<{ transcript: string }>> };
 type SpeechRecognitionLike = {
   lang: string;
@@ -56,6 +56,7 @@ export default function App() {
   const [answers, setAnswers] = useState<number[]>([]);
   const [graded, setGraded] = useState(false);
   const [flashcardSets, setFlashcardSets] = useState<SavedFlashcardSet[]>([]);
+  const [notes, setNotes] = useState<StudyNote[]>([]);
   const [activeFlashcards, setActiveFlashcards] = useState<SavedFlashcardSet | null>(null);
   const [flashcardIndex, setFlashcardIndex] = useState(0);
   const [flashcardRevealed, setFlashcardRevealed] = useState(false);
@@ -77,10 +78,11 @@ export default function App() {
   const selected = useMemo(() => materials.find((material) => material.id === selectedId) ?? null, [materials, selectedId]);
 
   async function refreshLocalData() {
-    const [savedMaterials, savedQuizzes, savedFlashcards] = await Promise.all([listMaterials(), listQuizzes(), listFlashcardSets()]);
+    const [savedMaterials, savedQuizzes, savedFlashcards, savedNotes] = await Promise.all([listMaterials(), listQuizzes(), listFlashcardSets(), listStudyNotes()]);
     setMaterials(savedMaterials);
     setQuizzes(savedQuizzes);
     setFlashcardSets(savedFlashcards);
+    setNotes(savedNotes);
     setSelectedId((current) => savedMaterials.some((material) => material.id === current) ? current : savedMaterials[0]?.id || '');
   }
 
@@ -128,6 +130,7 @@ export default function App() {
     setMaterials(remaining);
     setQuizzes((current) => current.filter((quiz) => quiz.materialId !== material.id));
     setFlashcardSets((current) => current.filter((set) => set.materialId !== material.id));
+    setNotes((current) => current.filter((note) => note.materialId !== material.id));
     if (activeFlashcards?.materialId === material.id) setActiveFlashcards(null);
     if (selectedId === material.id) {
       setSelectedId(remaining[0]?.id || '');
@@ -237,6 +240,30 @@ export default function App() {
     setNotice('حُذفت مجموعة البطاقات.');
   }
 
+  async function saveCurrentNote(text = selectedText, page = selectedPage) {
+    if (!selected || !text.trim()) {
+      setError('حدد نصًا من المحاضرة أولًا، ثم احفظه في الدفتر.');
+      return;
+    }
+    const note: StudyNote = {
+      id: crypto.randomUUID(),
+      materialId: selected.id,
+      materialName: selected.name,
+      page: page || 1,
+      text: text.trim().slice(0, 5000),
+      createdAt: Date.now()
+    };
+    await saveStudyNote(note);
+    setNotes((current) => [note, ...current]);
+    setNotice('حُفظ المقتطف في دفتر الملاحظات على هذا الجهاز.');
+  }
+
+  async function deleteNote(note: StudyNote) {
+    await removeStudyNote(note.id);
+    setNotes((current) => current.filter((item) => item.id !== note.id));
+    setNotice('حُذفت الملاحظة.');
+  }
+
   function startVoiceInput() {
     const speechWindow = window as SpeechWindow;
     const SpeechRecognition = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
@@ -331,6 +358,7 @@ export default function App() {
           <button className={view === 'study' ? 'nav-item active' : 'nav-item'} onClick={() => { if (selected) setView('study'); else setView('library'); }}><MessageCircle size={18} /> مدرس المحاضرة</button>
           <button className={view === 'quiz' ? 'nav-item active' : 'nav-item'} onClick={() => quizzes[0] ? openQuiz(quizzes[0]) : setView('library')}><BookOpen size={18} /> الامتحانات <span className="nav-count">{quizzes.length}</span></button>
           <button className={view === 'flashcards' ? 'nav-item active' : 'nav-item'} onClick={() => setView('flashcards')}><Bookmark size={18} /> بطاقات الحفظ <span className="nav-count">{flashcardSets.length}</span></button>
+          <button className={view === 'notes' ? 'nav-item active' : 'nav-item'} onClick={() => setView('notes')}><FileText size={18} /> دفتر الملاحظات <span className="nav-count">{notes.length}</span></button>
           <button className={view === 'settings' ? 'nav-item active' : 'nav-item'} onClick={() => setView('settings')}><Settings size={18} /> الإعدادات</button>
         </nav>
         <div className="sidebar-bottom">
@@ -341,7 +369,7 @@ export default function App() {
 
       <main className="main-content">
         <header className="topbar">
-          <div className="breadcrumb"><span>Hema Uni</span><ChevronLeft size={15} /><strong>{({ home: 'الرئيسية', library: 'مكتبتي', quiz: 'الامتحانات', study: 'مدرس المحاضرة', flashcards: 'بطاقات الحفظ', settings: 'الإعدادات' } as Record<View, string>)[view]}</strong></div>
+          <div className="breadcrumb"><span>Hema Uni</span><ChevronLeft size={15} /><strong>{({ home: 'الرئيسية', library: 'مكتبتي', quiz: 'الامتحانات', study: 'مدرس المحاضرة', flashcards: 'بطاقات الحفظ', notes: 'دفتر الملاحظات', settings: 'الإعدادات' } as Record<View, string>)[view]}</strong></div>
           <div className="topbar-actions"><button className="icon-btn" title="الإعدادات" aria-label="الإعدادات" onClick={() => setView('settings')}><Settings size={17} /></button><button className="top-upload" onClick={() => uploadRef.current?.click()}><FileUp size={17} /> رفع محاضرة</button></div>
           <input ref={uploadRef} className="hidden-input" type="file" accept="application/pdf,.pdf" onChange={onUpload} />
         </header>
