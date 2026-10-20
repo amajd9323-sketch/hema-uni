@@ -483,7 +483,7 @@ export default function App() {
         {view === 'library' && <section className="page">
           <div className="page-intro"><span className="eyebrow">محتواك الدراسي</span><h1>مكتبتي</h1><p>ملفات محاضراتك محفوظة محليًا. لا تُرسل للمساعد إلا المقاطع اللازمة عند طلب الشرح.</p></div>
           <div className="library-toolbar"><span>{materials.length} محاضرة محفوظة</span><button className="primary-btn small" onClick={() => uploadRef.current?.click()}><FileUp size={17} /> أضف PDF</button></div>
-          {materials.length ? <MaterialList materials={materials} onOpen={(item) => { setSelectedId(item.id); setView('study'); setResult(null); }} onDelete={deleteMaterial} /> : <EmptyState onUpload={() => uploadRef.current?.click()} />}
+          {materials.length ? <MaterialList materials={materials} onOpen={(item) => { setSelectedId(item.id); setSelectedText(''); setSelectedPage(undefined); setQuestion(''); setView('study'); setResult(null); }} onDelete={deleteMaterial} /> : <EmptyState onUpload={() => uploadRef.current?.click()} />}
           <div className="saved-quizzes"><div className="section-heading"><div><h2>اختبارات محفوظة</h2><p>تدريبات مؤقتة أو عادية من محاضراتك</p></div></div>
             {quizzes.length ? quizzes.map((quiz) => <button className="quiz-row" key={quiz.id} onClick={() => openQuiz(quiz)}><span className="quiz-row-icon"><BookOpen size={19} /></span><span className="quiz-row-info"><strong>{quiz.title}</strong><small>{quiz.questions.length} سؤال · {quiz.durationMinutes ? quiz.durationMinutes + ' دقيقة' : 'دون مؤقت'} · {new Date(quiz.createdAt).toLocaleDateString('ar')}</small></span><ChevronLeft size={18} /></button>) : <p className="muted-text">لم تنشئ اختبارات بعد.</p>}
           </div>
