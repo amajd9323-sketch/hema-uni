@@ -265,6 +265,11 @@ export default function App() {
   }
 
   function startVoiceInput() {
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      return;
+    }
     const speechWindow = window as SpeechWindow;
     const SpeechRecognition = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -307,6 +312,31 @@ export default function App() {
     setQuizzes((current) => current.map((quiz) => quiz.id === updated.id ? updated : quiz));
     setGraded(true);
     setTimerActive(false);
+  }
+
+  async function scheduleFlashcardReview(knewIt: boolean) {
+    if (!activeFlashcards) return;
+    const current = activeFlashcards.cards[flashcardIndex];
+    if (!current) return;
+    const intervalDays = knewIt
+      ? Math.min(30, Math.max(1, (current.intervalDays || 0) === 0 ? 1 : (current.intervalDays || 1) * 2))
+      : 0;
+    const dueAt = knewIt ? Date.now() + intervalDays * 24 * 60 * 60 * 1000 : Date.now() + 10 * 60 * 1000;
+    const updated: SavedFlashcardSet = {
+      ...activeFlashcards,
+      cards: activeFlashcards.cards.map((card, index) => index === flashcardIndex ? {
+        ...card,
+        dueAt,
+        intervalDays,
+        repetitions: (card.repetitions || 0) + 1
+      } : card)
+    };
+    await saveFlashcardSet(updated);
+    setActiveFlashcards(updated);
+    setFlashcardSets((currentSets) => currentSets.map((item) => item.id === updated.id ? updated : item));
+    setFlashcardRevealed(false);
+    setNotice(knewIt ? 'تمت جدولة البطاقة لمراجعة لاحقة.' : 'سنرجع لهذه البطاقة بعد 10 دقائق.');
+    if (flashcardIndex < updated.cards.length - 1) setFlashcardIndex((index) => index + 1);
   }
 
   function jumpToPage(page: number) {
@@ -506,6 +536,8 @@ export default function App() {
               {activeFlashcards.cards[flashcardIndex]?.page && <small>مرجع المحاضرة: صفحة {activeFlashcards.cards[flashcardIndex].page}</small>}
               <span className="flashcard-hint">{flashcardRevealed ? 'اضغط لإخفاء الإجابة' : 'اضغط لكشف الإجابة'}</span>
             </button>
+            {activeFlashcards.cards[flashcardIndex]?.dueAt && <p className="flashcard-due">موعد المراجعة: {new Date(activeFlashcards.cards[flashcardIndex].dueAt!).toLocaleString('ar')}</p>}
+            {flashcardRevealed && <div className="flashcard-review-actions"><button className="button-secondary" onClick={() => void scheduleFlashcardReview(false)}>صعبة — راجع بعد 10 دقائق</button><button className="primary-btn small" onClick={() => void scheduleFlashcardReview(true)}>عرفتها — راجع لاحقًا <CheckCircle2 size={15} /></button></div>}
             <div className="flashcard-controls"><button className="button-secondary" disabled={flashcardIndex === 0} onClick={() => { setFlashcardIndex((index) => index - 1); setFlashcardRevealed(false); }}><ChevronLeft size={17} /> السابقة</button><button className="primary-btn" onClick={() => { setFlashcardIndex((index) => (index + 1) % activeFlashcards.cards.length); setFlashcardRevealed(false); }}>التالية <ArrowRight size={17} /></button></div>
             <div className="flashcard-dots">{activeFlashcards.cards.map((_, index) => <button key={index} aria-label={'فتح البطاقة ' + (index + 1)} className={index === flashcardIndex ? 'active' : ''} onClick={() => { setFlashcardIndex(index); setFlashcardRevealed(false); }} />)}</div>
           </>}
@@ -517,14 +549,14 @@ export default function App() {
             <div className="note-card-head"><div><strong>{note.materialName}</strong><span>صفحة {note.page} · {new Date(note.createdAt).toLocaleDateString('ar')}</span></div><button className="icon-btn delete-btn" aria-label="حذف الملاحظة" onClick={() => void deleteNote(note)}><Trash2 size={15} /></button></div>
             <p>{note.text}</p>
             <div className="note-actions"><button className="button-secondary" onClick={() => { setSelectedId(note.materialId); setSelectedText(note.text); setSelectedPage(note.page); setQuestion('اشرح لي هذا المقتطف من المحاضرة مع مثال.'); setView('study'); window.setTimeout(() => document.getElementById('page-' + note.page)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150); }}>افتح مع المحاضرة <ChevronLeft size={14} /></button><button className="page-explain-button" onClick={() => { setSelectedId(note.materialId); setSelectedText(note.text); setSelectedPage(note.page); setQuestion('اشرح لي هذا المقتطف من المحاضرة مع مثال.'); setView('study'); }}>جهّز للشرح <BrainCircuit size={13} /></button></div>
-          </article>)}</div> : <EmptyState onUpload={() => setView('library')} />}
+          </article>)}</div> : <div className="empty-state"><span className="empty-icon"><Bookmark size={29} /></span><h3>دفتر الملاحظات فارغ</h3><p>افتح محاضرة، حدّد فقرة، ثم احفظها هنا للمراجعة.</p><button className="primary-btn" onClick={() => materials.length ? (setSelectedId(materials[0].id), setView('study')) : setView('library')}>ابدأ من محاضراتك <ArrowRight size={16} /></button></div>}
         </section>}
 
         {view === 'settings' && <section className="page">
           <div className="page-intro"><span className="eyebrow"><Settings size={15} /> تخصيص</span><h1>الإعدادات</h1><p>تحكم براحة القراءة والخصوصية المحلية.</p></div>
           <div className="settings-card"><div className="settings-icon"><BookOpen size={21} /></div><div className="settings-copy"><h3>حجم النص</h3><p>كبّر أو صغّر نص المحاضرة والإجابات ليناسب شاشة هاتفك.</p><div className="font-size-control"><button className="button-secondary" onClick={() => setFontScale((value) => Math.max(80, value - 10))}>أصغر A−</button><strong>{fontScale}%</strong><button className="button-secondary" onClick={() => setFontScale((value) => Math.min(130, value + 10))}>أكبر A+</button></div></div></div>
           <div className="settings-card"><div className="settings-icon purple"><BrainCircuit size={21} /></div><div className="settings-copy"><h3>المساعد الذكي</h3><p>يتطلب نشر وظيفة الخادم وإضافة GEMINI_API_KEY كـ Secret في إعدادات Cloudflare. المفتاح لا يُحفظ داخل الواجهة أو APK.</p><a className="external-link" href="https://ai.google.dev/gemini-api/docs/api-key" target="_blank" rel="noreferrer">طريقة إنشاء مفتاح API <ChevronLeft size={15} /></a></div></div>
-          <div className="settings-card"><div className="settings-icon teal"><WifiOff size={21} /></div><div className="settings-copy"><h3>الدراسة دون إنترنت</h3><p>المحاضرات والاختبارات والبطاقات المحفوظة تعمل محليًا. إجابات AI الجديدة تحتاج اتصالًا.</p><div className="offline-stats"><div><strong>{materials.length}</strong><span>محاضرات</span></div><div><strong>{quizzes.length}</strong><span>اختبارات</span></div><div><strong>{flashcardSets.length}</strong><span>مجموعات بطاقات</span></div></div></div></div>
+          <div className="settings-card"><div className="settings-icon teal"><WifiOff size={21} /></div><div className="settings-copy"><h3>الدراسة دون إنترنت</h3><p>المحاضرات والاختبارات والبطاقات المحفوظة تعمل محليًا. إجابات AI الجديدة تحتاج اتصالًا.</p><div className="offline-stats"><div><strong>{materials.length}</strong><span>محاضرات</span></div><div><strong>{quizzes.length}</strong><span>اختبارات</span></div><div><strong>{flashcardSets.length}</strong><span>مجموعات بطاقات</span></div><div><strong>{notes.length}</strong><span>ملاحظات</span></div></div></div></div>
           <div className="settings-card danger-card"><div className="settings-icon danger"><Trash2 size={21} /></div><div className="settings-copy"><h3>حذف البيانات</h3><p>حذف المحاضرات والاختبارات والبطاقات نهائيًا من هذا الجهاز.</p><button className="button-danger" onClick={async () => { if (!window.confirm('حذف كل المحاضرات والاختبارات والبطاقات من هذا الجهاز؟ لا يمكن التراجع.')) return; for (const material of materials) await removeMaterial(material.id); for (const set of flashcardSets) await removeFlashcardSet(set.id); setActiveFlashcards(null); await refreshLocalData(); setNotice('حُذفت البيانات المحلية.'); }}>حذف جميع البيانات</button></div></div>
         </section>}
 
@@ -534,6 +566,7 @@ export default function App() {
           <button className={view === 'study' ? 'mobile-nav-item active' : 'mobile-nav-item'} onClick={() => selected ? setView('study') : setView('library')}><MessageCircle size={19} /><span>المساعد</span></button>
           <button className={view === 'quiz' ? 'mobile-nav-item active' : 'mobile-nav-item'} onClick={() => quizzes[0] ? openQuiz(quizzes[0]) : setView('library')}><BookOpen size={19} /><span>الامتحانات</span></button>
           <button className={view === 'flashcards' ? 'mobile-nav-item active' : 'mobile-nav-item'} onClick={() => setView('flashcards')}><Bookmark size={19} /><span>بطاقات</span></button>
+          <button className={view === 'notes' ? 'mobile-nav-item active' : 'mobile-nav-item'} onClick={() => setView('notes')}><FileText size={19} /><span>ملاحظات</span></button>
         </nav>
         <footer className="app-footer"><span>Hema Uni · إصدار تجريبي</span><span>التعلّم خطوة بخطوة</span></footer>
       </main>
