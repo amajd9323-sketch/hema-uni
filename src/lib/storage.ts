@@ -55,3 +55,19 @@ export async function removeFlashcardSet(id: string): Promise<void> {
   const db = await dbPromise;
   await db.delete('flashcards', id);
 }
+
+
+export async function saveStudyNote(note: import('../types').StudyNote): Promise<void> {
+  const db = await dbPromise;
+  await db.put('notes', note);
+}
+
+export async function listStudyNotes(): Promise<import('../types').StudyNote[]> {
+  const db = await dbPromise;
+  return (await db.getAll('notes')).sort((a, b) => b.createdAt - a.createdAt) as import('../types').StudyNote[];
+}
+
+export async function removeStudyNote(id: string): Promise<void> {
+  const db = await dbPromise;
+  await db.delete('notes', id);
+}
