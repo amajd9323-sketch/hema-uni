@@ -48,6 +48,18 @@ export interface Flashcard {
   front: string;
   back: string;
   page?: number;
+  dueAt?: number;
+  intervalDays?: number;
+  repetitions?: number;
+}
+
+export interface StudyNote {
+  id: string;
+  materialId: string;
+  materialName: string;
+  page: number;
+  text: string;
+  createdAt: number;
 }
 
 export interface SavedFlashcardSet {
