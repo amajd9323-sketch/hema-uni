@@ -136,6 +136,7 @@ export default function App() {
     const remaining = materials.filter((item) => item.id !== material.id);
     setMaterials(remaining);
     setQuizzes((current) => current.filter((quiz) => quiz.materialId !== material.id));
+    if (activeQuiz?.materialId === material.id) { setActiveQuiz(null); setGraded(false); setTimerActive(false); }
     setFlashcardSets((current) => current.filter((set) => set.materialId !== material.id));
     setNotes((current) => current.filter((note) => note.materialId !== material.id));
     if (activeFlashcards?.materialId === material.id) setActiveFlashcards(null);
@@ -222,6 +223,7 @@ export default function App() {
 
   function openQuiz(quiz: SavedQuiz) {
     const isCompleted = Boolean(quiz.completedAt);
+    setSelectedId(quiz.materialId);
     setActiveQuiz(quiz);
     setAnswers(isCompleted && quiz.answers?.length === quiz.questions.length ? [...quiz.answers] : Array(quiz.questions.length).fill(-1));
     setGraded(isCompleted);
@@ -233,6 +235,7 @@ export default function App() {
   }
 
   function openFlashcards(set: SavedFlashcardSet) {
+    setSelectedId(set.materialId);
     setActiveFlashcards(set);
     setFlashcardIndex(0);
     setFlashcardRevealed(false);
@@ -398,7 +401,7 @@ export default function App() {
           <button className={view === 'home' ? 'nav-item active' : 'nav-item'} onClick={() => setView('home')}><Home size={18} /> الرئيسية</button>
           <button className={view === 'library' ? 'nav-item active' : 'nav-item'} onClick={() => setView('library')}><Library size={18} /> مكتبتي <span className="nav-count">{materials.length}</span></button>
           <button className={view === 'study' ? 'nav-item active' : 'nav-item'} onClick={() => { if (selected) setView('study'); else setView('library'); }}><MessageCircle size={18} /> مدرس المحاضرة</button>
-          <button className={view === 'quiz' ? 'nav-item active' : 'nav-item'} onClick={() => quizzes[0] ? openQuiz(quizzes[0]) : setView('library')}><BookOpen size={18} /> الامتحانات <span className="nav-count">{quizzes.length}</span></button>
+          <button className={view === 'quiz' ? 'nav-item active' : 'nav-item'} onClick={() => { setActiveQuiz(null); setView('quiz'); }}><BookOpen size={18} /> الامتحانات <span className="nav-count">{quizzes.length}</span></button>
           <button className={view === 'flashcards' ? 'nav-item active' : 'nav-item'} onClick={() => setView('flashcards')}><Bookmark size={18} /> بطاقات الحفظ <span className="nav-count">{flashcardSets.length}</span></button>
           <button className={view === 'notes' ? 'nav-item active' : 'nav-item'} onClick={() => setView('notes')}><FileText size={18} /> دفتر الملاحظات <span className="nav-count">{notes.length}</span></button>
           <button className={view === 'settings' ? 'nav-item active' : 'nav-item'} onClick={() => setView('settings')}><Settings size={18} /> الإعدادات</button>
@@ -444,7 +447,7 @@ export default function App() {
           <div className="action-grid">
             <button className="action-card" onClick={() => uploadRef.current?.click()}><span className="action-icon purple"><FileUp size={22} /></span><strong>أضف محاضرة</strong><small>استخرج نص PDF واحفظه بمكتبتك</small><span className="card-link">رفع ملف <ChevronLeft size={15} /></span></button>
             <button className="action-card" onClick={() => selected ? setView('study') : setView('library')}><span className="action-icon teal"><MessageCircle size={22} /></span><strong>اسأل المدرّس</strong><small>شرح مرتبط بصفحات محاضرتك</small><span className="card-link">ابدأ السؤال <ChevronLeft size={15} /></span></button>
-            <button className="action-card" onClick={() => selected ? void ask('quiz') : setView('library')}><span className="action-icon blue"><BookOpen size={22} /></span><strong>اختبر نفسك</strong><small>إنشاء امتحان مؤقت مع تصحيح ونتيجة</small><span className="card-link">إنشاء امتحان <ChevronLeft size={15} /></span></button>
+            <button className="action-card" onClick={() => selected ? (setActiveQuiz(null), setView('quiz')) : setView('library')}><span className="action-icon blue"><BookOpen size={22} /></span><strong>اختبر نفسك</strong><small>إنشاء امتحان مؤقت مع تصحيح ونتيجة</small><span className="card-link">إنشاء امتحان <ChevronLeft size={15} /></span></button>
             <button className="action-card" onClick={() => selected ? void ask('flashcards') : setView('library')}><span className="action-icon purple"><Bookmark size={22} /></span><strong>بطاقات الحفظ</strong><small>حوّل المفاهيم والتعاريف إلى بطاقات مراجعة</small><span className="card-link">إنشاء بطاقات <ChevronLeft size={15} /></span></button>
           </div>
 
@@ -514,7 +517,7 @@ export default function App() {
             <button className="back-link" onClick={() => setView('library')}><ArrowRight size={16} /> العودة للمكتبة</button>
             <div className="page-intro"><span className="eyebrow"><BookOpen size={15} /> {activeQuiz.durationMinutes ? 'محاكاة امتحان' : 'تدريب قصير'}</span><h1>{activeQuiz.title}</h1><p>{activeQuiz.questions.length} سؤال · {activeQuiz.difficulty === 'hard' ? 'صعب' : activeQuiz.difficulty === 'easy' ? 'سهل' : 'متوسط'} · اختر الإجابات ثم صحّح.</p></div>
             <div className="exam-toolbar">
-              <div className="exam-timer"><Clock3 size={17} /><span>{activeQuiz.durationMinutes ? (graded ? 'انتهى الامتحان' : formatTime(timeRemaining)) : 'دون مؤقت'}</span></div>
+              <div className="exam-timer"><Clock3 size={17} /><span>{activeQuiz.durationMinutes ? (graded ? 'تم التسليم' : formatTime(timeRemaining)) : 'دون مؤقت'}</span></div>
               <button className={examMode ? 'mode-toggle active' : 'mode-toggle'} onClick={() => { setExamMode((value) => !value); setQuestionIndex(0); }}>{examMode ? 'سؤال واحد/شاشة' : 'عرض كل الأسئلة'}</button>
               <span className="exam-count">{Object.values(answers).filter((answer) => answer >= 0).length}/{activeQuiz.questions.length} مجاب</span>
             </div>
@@ -578,7 +581,7 @@ export default function App() {
           <button className={view === 'home' ? 'mobile-nav-item active' : 'mobile-nav-item'} onClick={() => setView('home')}><Home size={19} /><span>الرئيسية</span></button>
           <button className={view === 'library' ? 'mobile-nav-item active' : 'mobile-nav-item'} onClick={() => setView('library')}><Library size={19} /><span>مكتبتي</span></button>
           <button className={view === 'study' ? 'mobile-nav-item active' : 'mobile-nav-item'} onClick={() => selected ? setView('study') : setView('library')}><MessageCircle size={19} /><span>المساعد</span></button>
-          <button className={view === 'quiz' ? 'mobile-nav-item active' : 'mobile-nav-item'} onClick={() => quizzes[0] ? openQuiz(quizzes[0]) : setView('library')}><BookOpen size={19} /><span>الامتحانات</span></button>
+          <button className={view === 'quiz' ? 'mobile-nav-item active' : 'mobile-nav-item'} onClick={() => { setActiveQuiz(null); setView('quiz'); }}><BookOpen size={19} /><span>الامتحانات</span></button>
           <button className={view === 'flashcards' ? 'mobile-nav-item active' : 'mobile-nav-item'} onClick={() => setView('flashcards')}><Bookmark size={19} /><span>بطاقات</span></button>
           <button className={view === 'notes' ? 'mobile-nav-item active' : 'mobile-nav-item'} onClick={() => setView('notes')}><FileText size={19} /><span>ملاحظات</span></button>
         </nav>
