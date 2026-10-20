@@ -1,11 +1,12 @@
 import { openDB } from 'idb';
 import type { Material, SavedQuiz, SavedFlashcardSet } from '../types';
 
-const dbPromise = openDB('hema-uni-db', 2, {
+const dbPromise = openDB('hema-uni-db', 3, {
   upgrade(db) {
     if (!db.objectStoreNames.contains('materials')) db.createObjectStore('materials', { keyPath: 'id' });
     if (!db.objectStoreNames.contains('quizzes')) db.createObjectStore('quizzes', { keyPath: 'id' });
     if (!db.objectStoreNames.contains('flashcards')) db.createObjectStore('flashcards', { keyPath: 'id' });
+    if (!db.objectStoreNames.contains('notes')) db.createObjectStore('notes', { keyPath: 'id' });
   }
 });
 
