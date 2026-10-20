@@ -399,3 +399,34 @@ a { color: inherit; text-decoration: none; }
   .flashcard-controls .button-secondary, .flashcard-controls .primary-btn { padding: 10px; font-size: 11px; }
   .exam-timer { font-size: 11px; }
 }
+
+
+/* notebook and final touch targets */
+.topbar-actions { display: flex; align-items: center; gap: 8px; }
+.notes-list { display: grid; gap: 11px; }
+.note-card { min-width: 0; padding: 15px; border: 1px solid #2a3348; border-radius: 14px; background: #101523; }
+.note-card-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.note-card-head > div { display: grid; gap: 5px; min-width: 0; }
+.note-card-head strong { color: #ded5ff; font-size: 12px; overflow-wrap: anywhere; }
+.note-card-head span { color: #8995ad; font-size: 10px; }
+.note-card > p { margin: 14px 0; padding: 11px 12px; border-right: 2px solid #8b5cf6; border-radius: 5px; color: #c4ccdc; background: #0c111f; font-size: calc(12px * var(--study-font-scale, 1)); line-height: 2; white-space: pre-wrap; overflow-wrap: anywhere; }
+.note-actions, .selected-text-actions, .page-snippet-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.selected-text-actions { justify-content: flex-start; }
+.page-snippet-actions { margin-top: 8px; }
+.page-save-button { display: inline-flex; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid #27554e; border-radius: 8px; color: #8de6d8; background: #102723; font-size: 10px; }
+.page-save-button:hover { border-color: #40b9a7; }
+.flashcard-due { margin: 8px 0 0; color: #9bdcd1; font-size: 10px; text-align: center; }
+.flashcard-review-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; margin-top: 12px; }
+.flashcard-review-actions .button-secondary { border-color: #7c5545; color: #ffd5b0; background: #2d211d; }
+.flashcard-review-actions .primary-btn { background: linear-gradient(120deg, #168c7c, #16675d); }
+.flashcard-face + .flashcard-review-actions { margin-top: 8px; }
+.mobile-nav-item { white-space: nowrap; }
+@media (max-width: 780px) {
+  .mobile-nav { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px; padding-right: 5px; padding-left: 5px; }
+  .mobile-nav-item { gap: 3px; font-size: 8px; }
+  .note-card { padding: 12px; }
+  .note-actions .button-secondary, .note-actions .page-explain-button { padding: 8px; font-size: 10px; }
+  .flashcard-review-actions { flex-direction: column; }
+  .flashcard-review-actions button { width: 100%; }
+  .topbar-actions .icon-btn { flex: 0 0 auto; }
+}
