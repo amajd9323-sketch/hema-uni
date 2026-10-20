@@ -22,12 +22,14 @@ export async function saveMaterial(material: Material): Promise<void> {
 
 export async function removeMaterial(id: string): Promise<void> {
   const db = await dbPromise;
-  const tx = db.transaction(['materials', 'quizzes', 'flashcards'], 'readwrite');
+  const tx = db.transaction(['materials', 'quizzes', 'flashcards', 'notes'], 'readwrite');
   await tx.objectStore('materials').delete(id);
   const quizzes = await tx.objectStore('quizzes').getAll() as SavedQuiz[];
   const flashcardSets = await tx.objectStore('flashcards').getAll() as SavedFlashcardSet[];
+  const notes = await tx.objectStore('notes').getAll() as import('../types').StudyNote[];
   for (const quiz of quizzes) if (quiz.materialId === id) await tx.objectStore('quizzes').delete(quiz.id);
   for (const set of flashcardSets) if (set.materialId === id) await tx.objectStore('flashcards').delete(set.id);
+  for (const note of notes) if (note.materialId === id) await tx.objectStore('notes').delete(note.id);
   await tx.done;
 }
 
