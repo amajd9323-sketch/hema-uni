@@ -420,7 +420,6 @@ export default function App() {
 
   useEffect(() => {
     if (Capacitor.getPlatform() === 'web') return;
-    let disposed = false;
     const listenerPromise = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
       if (activeFlashcards) {
         setActiveFlashcards(null);
@@ -443,11 +442,7 @@ export default function App() {
       }
       if (!canGoBack) void CapacitorApp.exitApp();
     });
-    void listenerPromise.then((listener) => {
-      if (disposed) void listener.remove();
-    });
     return () => {
-      disposed = true;
       void listenerPromise.then((listener) => listener.remove());
     };
   }, [view, activeQuiz, activeFlashcards, graded]);
