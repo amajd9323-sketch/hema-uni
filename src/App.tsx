@@ -318,7 +318,9 @@ export default function App() {
           <button className={view === 'home' ? 'nav-item active' : 'nav-item'} onClick={() => setView('home')}><Home size={18} /> الرئيسية</button>
           <button className={view === 'library' ? 'nav-item active' : 'nav-item'} onClick={() => setView('library')}><Library size={18} /> مكتبتي <span className="nav-count">{materials.length}</span></button>
           <button className={view === 'study' ? 'nav-item active' : 'nav-item'} onClick={() => { if (selected) setView('study'); else setView('library'); }}><MessageCircle size={18} /> مدرس المحاضرة</button>
-          <button className={view === 'quiz' ? 'nav-item active' : 'nav-item'} onClick={() => quizzes[0] ? openQuiz(quizzes[0]) : setView('library')}><BookOpen size={18} /> اختباراتي <span className="nav-count">{quizzes.length}</span></button>
+          <button className={view === 'quiz' ? 'nav-item active' : 'nav-item'} onClick={() => quizzes[0] ? openQuiz(quizzes[0]) : setView('library')}><BookOpen size={18} /> الامتحانات <span className="nav-count">{quizzes.length}</span></button>
+          <button className={view === 'flashcards' ? 'nav-item active' : 'nav-item'} onClick={() => setView('flashcards')}><Bookmark size={18} /> بطاقات الحفظ <span className="nav-count">{flashcardSets.length}</span></button>
+          <button className={view === 'settings' ? 'nav-item active' : 'nav-item'} onClick={() => setView('settings')}><Settings size={18} /> الإعدادات</button>
         </nav>
         <div className="sidebar-bottom">
           <div className="offline-note"><WifiOff size={17} /><span><strong>مكتبتك محلية</strong><small>ملفاتك محفوظة على جهازك</small></span></div>
@@ -328,8 +330,8 @@ export default function App() {
 
       <main className="main-content">
         <header className="topbar">
-          <div className="breadcrumb"><span>Hema Uni</span><ChevronLeft size={15} /><strong>{view === 'home' ? 'الرئيسية' : view === 'library' ? 'مكتبتي' : view === 'quiz' ? 'اختباراتي' : 'مدرس المحاضرة'}</strong></div>
-          <button className="top-upload" onClick={() => uploadRef.current?.click()}><FileUp size={17} /> رفع محاضرة</button>
+          <div className="breadcrumb"><span>Hema Uni</span><ChevronLeft size={15} /><strong>{({ home: 'الرئيسية', library: 'مكتبتي', quiz: 'الامتحانات', study: 'مدرس المحاضرة', flashcards: 'بطاقات الحفظ', settings: 'الإعدادات' } as Record<View, string>)[view]}</strong></div>
+          <div className="topbar-actions"><button className="icon-btn" title="الإعدادات" aria-label="الإعدادات" onClick={() => setView('settings')}><Settings size={17} /></button><button className="top-upload" onClick={() => uploadRef.current?.click()}><FileUp size={17} /> رفع محاضرة</button></div>
           <input ref={uploadRef} className="hidden-input" type="file" accept="application/pdf,.pdf" onChange={onUpload} />
         </header>
 
@@ -361,7 +363,8 @@ export default function App() {
           <div className="action-grid">
             <button className="action-card" onClick={() => uploadRef.current?.click()}><span className="action-icon purple"><FileUp size={22} /></span><strong>أضف محاضرة</strong><small>استخرج نص PDF واحفظه بمكتبتك</small><span className="card-link">رفع ملف <ChevronLeft size={15} /></span></button>
             <button className="action-card" onClick={() => selected ? setView('study') : setView('library')}><span className="action-icon teal"><MessageCircle size={22} /></span><strong>اسأل المدرّس</strong><small>شرح مرتبط بصفحات محاضرتك</small><span className="card-link">ابدأ السؤال <ChevronLeft size={15} /></span></button>
-            <button className="action-card" onClick={() => selected ? void ask('quiz') : setView('library')}><span className="action-icon blue"><BookOpen size={22} /></span><strong>اختبر نفسك</strong><small>أنشئ اختبارًا قصيرًا من المادة</small><span className="card-link">إنشاء اختبار <ChevronLeft size={15} /></span></button>
+            <button className="action-card" onClick={() => selected ? void ask('quiz') : setView('library')}><span className="action-icon blue"><BookOpen size={22} /></span><strong>اختبر نفسك</strong><small>إنشاء امتحان مؤقت مع تصحيح ونتيجة</small><span className="card-link">إنشاء امتحان <ChevronLeft size={15} /></span></button>
+            <button className="action-card" onClick={() => selected ? void ask('flashcards') : setView('library')}><span className="action-icon purple"><Bookmark size={22} /></span><strong>بطاقات الحفظ</strong><small>حوّل المفاهيم والتعاريف إلى بطاقات مراجعة</small><span className="card-link">إنشاء بطاقات <ChevronLeft size={15} /></span></button>
           </div>
 
           <div className="section-heading recent-heading"><div><h2>آخر محاضراتك</h2><p>تُحفظ على هذا الجهاز</p></div><button className="text-btn" onClick={() => setView('library')}>عرض المكتبة <ChevronLeft size={15} /></button></div>
@@ -372,23 +375,28 @@ export default function App() {
           <div className="page-intro"><span className="eyebrow">محتواك الدراسي</span><h1>مكتبتي</h1><p>ملفات محاضراتك محفوظة محليًا. لا تُرسل للمساعد إلا المقاطع اللازمة عند طلب الشرح.</p></div>
           <div className="library-toolbar"><span>{materials.length} محاضرة محفوظة</span><button className="primary-btn small" onClick={() => uploadRef.current?.click()}><FileUp size={17} /> أضف PDF</button></div>
           {materials.length ? <MaterialList materials={materials} onOpen={(item) => { setSelectedId(item.id); setView('study'); setResult(null); }} onDelete={deleteMaterial} /> : <EmptyState onUpload={() => uploadRef.current?.click()} />}
-          <div className="saved-quizzes"><div className="section-heading"><div><h2>اختبارات محفوظة</h2><p>ارجع لتدريب سابق</p></div></div>
-            {quizzes.length ? quizzes.map((quiz) => <button className="quiz-row" key={quiz.id} onClick={() => openQuiz(quiz)}><span className="quiz-row-icon"><BookOpen size={19} /></span><span className="quiz-row-info"><strong>{quiz.title}</strong><small>{quiz.questions.length} أسئلة · {new Date(quiz.createdAt).toLocaleDateString('ar')}</small></span><ChevronLeft size={18} /></button>) : <p className="muted-text">لم تنشئ اختبارات بعد.</p>}
+          <div className="saved-quizzes"><div className="section-heading"><div><h2>اختبارات محفوظة</h2><p>تدريبات مؤقتة أو عادية من محاضراتك</p></div></div>
+            {quizzes.length ? quizzes.map((quiz) => <button className="quiz-row" key={quiz.id} onClick={() => openQuiz(quiz)}><span className="quiz-row-icon"><BookOpen size={19} /></span><span className="quiz-row-info"><strong>{quiz.title}</strong><small>{quiz.questions.length} سؤال · {quiz.durationMinutes ? quiz.durationMinutes + ' دقيقة' : 'دون مؤقت'} · {new Date(quiz.createdAt).toLocaleDateString('ar')}</small></span><ChevronLeft size={18} /></button>) : <p className="muted-text">لم تنشئ اختبارات بعد.</p>}
+          </div>
+          <div className="saved-quizzes"><div className="section-heading"><div><h2>بطاقات الحفظ</h2><p>راجع المصطلحات والتعاريف بسرعة</p></div><button className="text-btn" onClick={() => setView('flashcards')}>عرض الكل <ChevronLeft size={15} /></button></div>
+            {flashcardSets.length ? flashcardSets.slice(0, 3).map((set) => <button className="quiz-row" key={set.id} onClick={() => openFlashcards(set)}><span className="quiz-row-icon"><Bookmark size={19} /></span><span className="quiz-row-info"><strong>{set.title}</strong><small>{set.cards.length} بطاقة · {new Date(set.createdAt).toLocaleDateString('ar')}</small></span><ChevronLeft size={18} /></button>) : <p className="muted-text">لم تنشئ بطاقات بعد.</p>}
           </div>
         </section>}
 
         {view === 'study' && <section className="page study-page">
           {!selected ? <EmptyState onUpload={() => uploadRef.current?.click()} /> : <>
             <div className="page-intro study-intro"><span className="eyebrow"><BrainCircuit size={15} /> المدرّس الذكي</span><h1>{selected.name}</h1><p>{selected.pages.length} صفحة · {formatSize(selected.size)} · النص والمراجع محفوظة على جهازك</p></div>
+            <PdfReader file={selected.file} />
             <div className="tutor-layout">
               <div className="tutor-panel">
                 <div className="panel-head"><span className="assistant-avatar"><BrainCircuit size={20} /></span><div><strong>اسأل محاضرتك</strong><small>إجابات مستندة إلى الصفحات المتاحة</small></div><span className="online-dot"></span></div>
-                <div className="starter-prompts"><button onClick={() => { setQuestion('اشرح أهم فكرة في هذه المحاضرة بطريقة سهلة مع مثال.'); }}>اشرح أهم فكرة</button><button onClick={() => void ask('summary')}>لخّص المحاضرة</button><button onClick={() => void ask('quiz')}>أنشئ اختبارًا</button></div>
+                <div className="starter-prompts"><button onClick={() => { setQuestion('اشرح أهم فكرة في هذه المحاضرة بطريقة سهلة مع مثال.'); }}>اشرح أهم فكرة</button><button onClick={() => void ask('summary')}>لخّص المحاضرة</button><button onClick={() => void ask('quiz')}>أنشئ اختبارًا</button><button onClick={() => void ask('flashcards')}>بطاقات حفظ</button>{selectedText && <button onClick={() => void ask('explain', selectedText, selectedPage)}>اشرح النص المحدد</button>}</div>
                 <form className="question-form" onSubmit={submitQuestion}>
                   <label htmlFor="question">شو حابب تفهم؟</label>
-                  <textarea id="question" value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="مثال: اشرح لي مفهومًا صعبًا في الصفحة 5..." rows={3} maxLength={1500} />
-                  <div className="form-foot"><span>{question.length}/1500</span><button className="primary-btn small" disabled={busy || !question.trim()} type="submit">{busy ? <Loader2 className="spin" size={16} /> : <Send size={16} />} اسأل المدرّس</button></div>
+                  <textarea id="question" value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="اكتب سؤالك أو استخدم الميكروفون..." rows={3} maxLength={1500} />
+                  <div className="form-foot"><span>{question.length}/1500</span><div className="form-buttons"><button className={listening ? 'icon-btn listening' : 'icon-btn'} type="button" title="اسأل بصوتك" aria-label="اسأل بصوتك" onClick={startVoiceInput}><Mic size={17} /></button><button className="primary-btn small" disabled={busy || (!question.trim() && !selectedText)} type="submit">{busy ? <Loader2 className="spin" size={16} /> : <Send size={16} />} اسأل المدرّس</button></div></div>
                 </form>
+                {selectedText && <div className="selected-text-box"><div><strong>النص المحدد — صفحة {selectedPage}</strong><button aria-label="مسح النص المحدد" onClick={() => { setSelectedText(''); setSelectedPage(undefined); }}><X size={14} /></button></div><p>{selectedText.slice(0, 360)}{selectedText.length > 360 ? '…' : ''}</p><button className="primary-btn small" onClick={() => void ask('explain', selectedText, selectedPage)}>اشرح المقطع المحدد <Sparkles size={15} /></button></div>}
                 <p className="privacy-note"><AlertCircle size={14} /> عند استخدام AI، تُرسل مقتطفات من الصفحات المختارة إلى مزود الخدمة عبر الخادم.</p>
                 {result && <div className="answer-box" ref={chatRef}>
                   <div className="answer-title"><Sparkles size={17} /><strong>{result.model ? 'إجابة المساعد' : 'النتيجة'}</strong></div>
@@ -398,7 +406,7 @@ export default function App() {
               </div>
               <div className="pages-panel">
                 <div className="panel-head"><span className="pages-icon"><FileText size={19} /></span><div><strong>نص المحاضرة</strong><small>تقدر ترجع للمصدر بأي وقت</small></div></div>
-                <div className="page-list">{selected.pages.map((page) => <article className="page-snippet" id={'page-' + page.page} key={page.page}><div className="page-snippet-head"><strong>صفحة {page.page}</strong><button onClick={() => { setQuestion('اشرح محتوى الصفحة ' + page.page + ' مع مثال.'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>اسأل عنها <ChevronLeft size={13} /></button></div><p>{page.text || 'لم يُستخرج نص من هذه الصفحة.'}</p></article>)}</div>
+                <div className="page-list">{selected.pages.map((page) => <article className="page-snippet" id={'page-' + page.page} key={page.page} onMouseUp={() => { const text = window.getSelection()?.toString().trim() || ''; if (text.length > 5) { setSelectedText(text.slice(0, 5000)); setSelectedPage(page.page); } }}><div className="page-snippet-head"><strong>صفحة {page.page}</strong><button onMouseDown={(event) => event.preventDefault()} onClick={() => { setQuestion('اشرح محتوى الصفحة ' + page.page + ' مع مثال.'); setSelectedPage(page.page); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>اسأل عنها <ChevronLeft size={13} /></button></div><p>{page.text || 'لم يُستخرج نص من هذه الصفحة.'}</p><button className="page-explain-button" onMouseDown={(event) => event.preventDefault()} onClick={() => { const text = window.getSelection()?.toString().trim(); const focus = text && text.length > 5 ? text.slice(0, 5000) : page.text.slice(0, 5000); setSelectedText(focus); setSelectedPage(page.page); void ask('explain', focus, page.page); }}>اشرح نص الصفحة <Sparkles size={13} /></button></article>)}</div>
               </div>
             </div>
           </>}
@@ -418,7 +426,8 @@ export default function App() {
           <button className={view === 'home' ? 'mobile-nav-item active' : 'mobile-nav-item'} onClick={() => setView('home')}><Home size={19} /><span>الرئيسية</span></button>
           <button className={view === 'library' ? 'mobile-nav-item active' : 'mobile-nav-item'} onClick={() => setView('library')}><Library size={19} /><span>مكتبتي</span></button>
           <button className={view === 'study' ? 'mobile-nav-item active' : 'mobile-nav-item'} onClick={() => selected ? setView('study') : setView('library')}><MessageCircle size={19} /><span>المساعد</span></button>
-          <button className={view === 'quiz' ? 'mobile-nav-item active' : 'mobile-nav-item'} onClick={() => quizzes[0] ? openQuiz(quizzes[0]) : setView('library')}><BookOpen size={19} /><span>اختباراتي</span></button>
+          <button className={view === 'quiz' ? 'mobile-nav-item active' : 'mobile-nav-item'} onClick={() => quizzes[0] ? openQuiz(quizzes[0]) : setView('library')}><BookOpen size={19} /><span>الامتحانات</span></button>
+          <button className={view === 'flashcards' ? 'mobile-nav-item active' : 'mobile-nav-item'} onClick={() => setView('flashcards')}><Bookmark size={19} /><span>بطاقات</span></button>
         </nav>
         <footer className="app-footer"><span>Hema Uni · إصدار تجريبي</span><span>التعلّم خطوة بخطوة</span></footer>
       </main>
