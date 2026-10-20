@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core';
 import type { Flashcard, Material, QuizQuestion, TutorResult } from '../types';
 
 export type TutorAction = 'ask' | 'summary' | 'quiz' | 'flashcards' | 'explain';
@@ -13,6 +14,34 @@ export interface TutorOptions {
   selectedPage?: number;
   questionCount?: number;
   difficulty?: TutorDifficulty;
+}
+
+const AI_BASE_URL_KEY = 'hema-uni-ai-base-url';
+
+function getAiEndpoint(): string {
+  let configuredBase = '';
+  try {
+    configuredBase = window.localStorage.getItem(AI_BASE_URL_KEY)?.trim() || '';
+  } catch {
+    configuredBase = '';
+  }
+  if (!configuredBase) {
+    if (Capacitor.isNativePlatform()) {
+      throw new Error('عنوان خدمة AI غير مضبوط على أندرويد. افتح الإعدادات وأدخل رابط Cloudflare Pages المنشور.');
+    }
+    return '/api/ai';
+  }
+  let base: URL;
+  try {
+    base = new URL(configuredBase);
+  } catch {
+    throw new Error('رابط خدمة AI غير صالح. أدخل رابطًا كاملًا مثل https://your-project.pages.dev');
+  }
+  const isLocalHttp = base.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(base.hostname);
+  if (base.protocol !== 'https:' && !isLocalHttp) {
+    throw new Error('رابط خدمة AI يجب أن يبدأ بـ https://');
+  }
+  return new URL('/api/ai', base.origin).toString();
 }
 
 function spreadPages(material: Material, maxPages: number, charsPerPage: number) {
@@ -67,7 +96,7 @@ export async function runTutor(
     questionCount: Math.max(5, Math.min(15, options.questionCount ?? 5)),
     difficulty: options.difficulty ?? 'medium'
   };
-  const response = await fetch('/api/ai', {
+  const response = await fetch(getAiEndpoint(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(requestBody)
