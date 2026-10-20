@@ -8,7 +8,14 @@ export async function extractPdf(file: File): Promise<PageText[]> {
   if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
     throw new Error('ارفع ملف PDF فقط.');
   }
+  if (file.size > 40 * 1024 * 1024) {
+    throw new Error('حجم الملف أكبر من 40 ميغابايت. جرّب ضغط المحاضرة أو تقسيمها.');
+  }
   const pdf = await getDocument({ data: await file.arrayBuffer() }).promise;
+  if (pdf.numPages > 800) {
+    await pdf.destroy();
+    throw new Error('المحاضرة تتجاوز 800 صفحة. قسّم الملف إلى أجزاء أصغر لتقليل استهلاك ذاكرة الهاتف.');
+  }
   const pages: PageText[] = [];
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
     const page = await pdf.getPage(pageNumber);
