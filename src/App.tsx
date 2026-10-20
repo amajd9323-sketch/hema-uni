@@ -60,6 +60,7 @@ export default function App() {
   const [activeFlashcards, setActiveFlashcards] = useState<SavedFlashcardSet | null>(null);
   const [flashcardIndex, setFlashcardIndex] = useState(0);
   const [flashcardRevealed, setFlashcardRevealed] = useState(false);
+  const [reviewDueOnly, setReviewDueOnly] = useState(false);
   const [selectedText, setSelectedText] = useState('');
   const [selectedPage, setSelectedPage] = useState<number | undefined>(undefined);
   const [listening, setListening] = useState(false);
@@ -76,6 +77,12 @@ export default function App() {
   const chatRef = useRef<HTMLDivElement>(null);
 
   const selected = useMemo(() => materials.find((material) => material.id === selectedId) ?? null, [materials, selectedId]);
+  const visibleFlashcards = useMemo(() => activeFlashcards
+    ? activeFlashcards.cards.map((card, originalIndex) => ({ card, originalIndex }))
+      .filter(({ card }) => !reviewDueOnly || !card.dueAt || card.dueAt <= Date.now())
+    : [], [activeFlashcards, reviewDueOnly]);
+  const currentFlashcardEntry = visibleFlashcards[flashcardIndex] ?? null;
+  const currentFlashcard = currentFlashcardEntry?.card ?? null;
 
   async function refreshLocalData() {
     const [savedMaterials, savedQuizzes, savedFlashcards, savedNotes] = await Promise.all([listMaterials(), listQuizzes(), listFlashcardSets(), listStudyNotes()]);
@@ -229,6 +236,7 @@ export default function App() {
     setActiveFlashcards(set);
     setFlashcardIndex(0);
     setFlashcardRevealed(false);
+    setReviewDueOnly(false);
     setView('flashcards');
   }
 
@@ -315,16 +323,16 @@ export default function App() {
   }
 
   async function scheduleFlashcardReview(knewIt: boolean) {
-    if (!activeFlashcards) return;
-    const current = activeFlashcards.cards[flashcardIndex];
-    if (!current) return;
+    if (!activeFlashcards || !currentFlashcardEntry) return;
+    const current = currentFlashcardEntry.card;
+    const originalIndex = currentFlashcardEntry.originalIndex;
     const intervalDays = knewIt
       ? Math.min(30, Math.max(1, (current.intervalDays || 0) === 0 ? 1 : (current.intervalDays || 1) * 2))
       : 0;
     const dueAt = knewIt ? Date.now() + intervalDays * 24 * 60 * 60 * 1000 : Date.now() + 10 * 60 * 1000;
     const updated: SavedFlashcardSet = {
       ...activeFlashcards,
-      cards: activeFlashcards.cards.map((card, index) => index === flashcardIndex ? {
+      cards: activeFlashcards.cards.map((card, index) => index === originalIndex ? {
         ...card,
         dueAt,
         intervalDays,
@@ -336,7 +344,11 @@ export default function App() {
     setFlashcardSets((currentSets) => currentSets.map((item) => item.id === updated.id ? updated : item));
     setFlashcardRevealed(false);
     setNotice(knewIt ? 'تمت جدولة البطاقة لمراجعة لاحقة.' : 'سنرجع لهذه البطاقة بعد 10 دقائق.');
-    if (flashcardIndex < updated.cards.length - 1) setFlashcardIndex((index) => index + 1);
+    if (reviewDueOnly) {
+      setFlashcardIndex((index) => Math.min(index, Math.max(0, visibleFlashcards.length - 2)));
+    } else if (flashcardIndex < updated.cards.length - 1) {
+      setFlashcardIndex((index) => index + 1);
+    }
   }
 
   function jumpToPage(page: number) {
@@ -529,17 +541,19 @@ export default function App() {
               {flashcardSets.length ? flashcardSets.map((set) => <div className="saved-flashcard-row" key={set.id}><button className="quiz-row" onClick={() => openFlashcards(set)}><span className="quiz-row-icon"><Bookmark size={19} /></span><span className="quiz-row-info"><strong>{set.title}</strong><small>{set.cards.length} بطاقة · {new Date(set.createdAt).toLocaleDateString('ar')}</small></span><ChevronLeft size={18} /></button><button className="icon-btn delete-btn" aria-label="حذف المجموعة" onClick={() => void deleteFlashcardSet(set)}><Trash2 size={16} /></button></div>) : <p className="muted-text">لا توجد بطاقات محفوظة.</p>}
             </div>
           </> : <>
-            <div className="flashcard-session-head"><button className="back-link" onClick={() => setActiveFlashcards(null)}><ArrowRight size={16} /> كل المجموعات</button><span>{flashcardIndex + 1} / {activeFlashcards.cards.length}</span></div>
-            <button className={'flashcard-face' + (flashcardRevealed ? ' revealed' : '')} onClick={() => setFlashcardRevealed((value) => !value)} aria-label="قلب بطاقة الحفظ">
-              <span className="flashcard-label">{flashcardRevealed ? 'الإجابة' : 'السؤال / المصطلح'}</span>
-              <strong>{flashcardRevealed ? activeFlashcards.cards[flashcardIndex]?.back : activeFlashcards.cards[flashcardIndex]?.front}</strong>
-              {activeFlashcards.cards[flashcardIndex]?.page && <small>مرجع المحاضرة: صفحة {activeFlashcards.cards[flashcardIndex].page}</small>}
-              <span className="flashcard-hint">{flashcardRevealed ? 'اضغط لإخفاء الإجابة' : 'اضغط لكشف الإجابة'}</span>
-            </button>
-            {activeFlashcards.cards[flashcardIndex]?.dueAt && <p className="flashcard-due">موعد المراجعة: {new Date(activeFlashcards.cards[flashcardIndex].dueAt!).toLocaleString('ar')}</p>}
-            {flashcardRevealed && <div className="flashcard-review-actions"><button className="button-secondary" onClick={() => void scheduleFlashcardReview(false)}>صعبة — راجع بعد 10 دقائق</button><button className="primary-btn small" onClick={() => void scheduleFlashcardReview(true)}>عرفتها — راجع لاحقًا <CheckCircle2 size={15} /></button></div>}
-            <div className="flashcard-controls"><button className="button-secondary" disabled={flashcardIndex === 0} onClick={() => { setFlashcardIndex((index) => index - 1); setFlashcardRevealed(false); }}><ChevronLeft size={17} /> السابقة</button><button className="primary-btn" onClick={() => { setFlashcardIndex((index) => (index + 1) % activeFlashcards.cards.length); setFlashcardRevealed(false); }}>التالية <ArrowRight size={17} /></button></div>
-            <div className="flashcard-dots">{activeFlashcards.cards.map((_, index) => <button key={index} aria-label={'فتح البطاقة ' + (index + 1)} className={index === flashcardIndex ? 'active' : ''} onClick={() => { setFlashcardIndex(index); setFlashcardRevealed(false); }} />)}</div>
+            <div className="flashcard-session-head"><button className="back-link" onClick={() => setActiveFlashcards(null)}><ArrowRight size={16} /> كل المجموعات</button><div className="flashcard-session-actions"><button className={reviewDueOnly ? 'mode-toggle active' : 'mode-toggle'} onClick={() => { setReviewDueOnly((value) => !value); setFlashcardIndex(0); setFlashcardRevealed(false); }}>{reviewDueOnly ? 'عرض كل البطاقات' : 'المستحق للمراجعة'}</button><span>{visibleFlashcards.length ? flashcardIndex + 1 : 0} / {visibleFlashcards.length}</span></div></div>
+            {currentFlashcard ? <>
+              <button className={'flashcard-face' + (flashcardRevealed ? ' revealed' : '')} onClick={() => setFlashcardRevealed((value) => !value)} aria-label="قلب بطاقة الحفظ">
+                <span className="flashcard-label">{flashcardRevealed ? 'الإجابة' : 'السؤال / المصطلح'}</span>
+                <strong>{flashcardRevealed ? currentFlashcard.back : currentFlashcard.front}</strong>
+                {currentFlashcard.page && <small>مرجع المحاضرة: صفحة {currentFlashcard.page}</small>}
+                <span className="flashcard-hint">{flashcardRevealed ? 'اضغط لإخفاء الإجابة' : 'اضغط لكشف الإجابة'}</span>
+              </button>
+              {currentFlashcard.dueAt && <p className="flashcard-due">موعد المراجعة: {new Date(currentFlashcard.dueAt).toLocaleString('ar')}</p>}
+              {flashcardRevealed && <div className="flashcard-review-actions"><button className="button-secondary" onClick={() => void scheduleFlashcardReview(false)}>صعبة — راجع بعد 10 دقائق</button><button className="primary-btn small" onClick={() => void scheduleFlashcardReview(true)}>عرفتها — راجع لاحقًا <CheckCircle2 size={15} /></button></div>}
+              <div className="flashcard-controls"><button className="button-secondary" disabled={flashcardIndex === 0} onClick={() => { setFlashcardIndex((index) => Math.max(0,index - 1)); setFlashcardRevealed(false); }}><ChevronLeft size={17} /> السابقة</button><button className="primary-btn" disabled={visibleFlashcards.length < 2} onClick={() => { setFlashcardIndex((index) => (index + 1) % visibleFlashcards.length); setFlashcardRevealed(false); }}>التالية <ArrowRight size={17} /></button></div>
+              <div className="flashcard-dots">{visibleFlashcards.map(({ originalIndex }) => <button key={originalIndex} aria-label={'فتح البطاقة ' + (originalIndex + 1)} className={currentFlashcardEntry?.originalIndex === originalIndex ? 'active' : ''} onClick={() => { setFlashcardIndex(visibleFlashcards.findIndex((entry) => entry.originalIndex === originalIndex)); setFlashcardRevealed(false); }} />)}</div>
+            </> : <div className="empty-state"><span className="empty-icon"><CheckCircle2 size={29} /></span><h3>{reviewDueOnly ? 'أنهيت البطاقات المستحقة' : 'لا توجد بطاقات'}</h3><p>{reviewDueOnly ? 'لا توجد بطاقات مستحقة الآن. البطاقات المجدولة ستظهر عند حلول وقت مراجعتها.' : 'هذه المجموعة لا تحتوي بطاقات.'}</p><button className="primary-btn" onClick={() => setReviewDueOnly(false)}>عرض كل البطاقات</button></div>}
           </>}
         </section>}
 
