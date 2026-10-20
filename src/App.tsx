@@ -567,7 +567,7 @@ export default function App() {
               </div>
               <p className="muted-text">AI ينشئ أسئلة من نصوص المحاضرة المتاحة. راجع دائمًا التفسيرات مع المصدر.</p>
               <button className="primary-btn" disabled={busy || !selected.pages.some((page) => page.text.trim())} onClick={() => void ask('quiz')}>{busy ? <Loader2 className="spin" size={17} /> : <BookOpen size={17} />} إنشاء الامتحان</button>
-            </div>
+            </div>}
             <div className="saved-quizzes"><div className="section-heading"><div><h2>امتحانات سابقة</h2><p>نتائج محفوظة محليًا</p></div></div>
               {quizzes.length ? quizzes.map((quiz) => <button className="quiz-row" key={quiz.id} onClick={() => openQuiz(quiz)}><span className="quiz-row-icon"><BookOpen size={19} /></span><span className="quiz-row-info"><strong>{quiz.title}</strong><small>{quiz.questions.length} سؤال · {quiz.durationMinutes ? quiz.durationMinutes + ' دقيقة' : 'دون مؤقت'} · {quiz.completedAt ? 'النتيجة ' + quiz.score + '/' + quiz.questions.length : 'لم يُسلّم بعد'}</small></span><ChevronLeft size={18} /></button>) : <p className="muted-text">لم تحفظ امتحانات بعد.</p>}
             </div>
